@@ -111,7 +111,7 @@ Files stored in the scratch zone are **temporary and may be deleted during regul
 For more persistent storage and access, use the **default zone**. To use it, you must:
 
 1. Register at [kachery.vercel.app](https://kachery.vercel.app) using your GitHub account.
-2. Go to settings and provide an email address and a short description of your research purpose.
+2. Go to settings and provide your name, an email address and a short description of your research purpose.
 3. Set the `KACHERY_API_KEY` environment variable with your assigned API key.
 
 The default zone allows uploads from all registered users and is suitable for light usage in scientific research. The intent is for files to be available for long-term use, but we may at some point delete files that have not been accessed for a long time.

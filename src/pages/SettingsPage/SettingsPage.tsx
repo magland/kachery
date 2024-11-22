@@ -70,6 +70,25 @@ const SettingsPage: FunctionComponent<SettingsPageProps> = () => {
               </tr>
               <tr>
                 <td>
+                  <span
+                    style={{
+                      color: user.name ? "black" : "red",
+                    }}
+                  >
+                    Name {user.name ? "" : "(required for uploading)"}
+                  </span>
+                </td>
+                <td>
+                  <EditNameComponent
+                    name={user.name || ""}
+                    setName={(x) => {
+                      setUserInfo({ name: x });
+                    }}
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td>
                   <span style={{ color: user.email ? "black" : "red" }}>
                     Email address {user.email ? "" : "(required for uploading)"}
                   </span>
@@ -168,6 +187,43 @@ const EditEmailAddressComponent: FunctionComponent<
       ) : (
         <div>
           {emailAddress}&nbsp;
+          <button onClick={() => setEditing(true)}>Edit</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+type NameComponentProps = {
+  name: string;
+  setName: (name: string) => void;
+};
+
+const EditNameComponent: FunctionComponent<NameComponentProps> = ({
+  name,
+  setName,
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [newName, setNewName] = useState(name);
+  const handleSave = useCallback(() => {
+    setName(newName);
+    setEditing(false);
+  }, [newName, setName]);
+  return (
+    <div>
+      {editing ? (
+        <div>
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+          />
+          <button onClick={handleSave}>Save</button>
+          <button onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      ) : (
+        <div>
+          {name}&nbsp;
           <button onClick={() => setEditing(true)}>Edit</button>
         </div>
       )}

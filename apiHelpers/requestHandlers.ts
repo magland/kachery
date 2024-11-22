@@ -562,6 +562,10 @@ export const initiateFileUploadHandler = allowCors(
           });
           return;
         }
+        if (!user.name) {
+          res.status(400).json({ error: `Name not set for user: ${userId}` });
+          return;
+        }
       }
       const zone = await fetchZone(zoneName, { includeCredentials: true });
       if (!zone) {
