@@ -11,6 +11,7 @@ export const createSignedDownloadUrl = async (a: {
   hash: string;
   hashAlg: string;
 }): Promise<{
+  found: boolean;
   signedDownloadUrl: string;
   size: number;
   objectKey: string;
@@ -36,16 +37,50 @@ export const createSignedDownloadUrl = async (a: {
   };
   const { exists, size } = await objectExists(bucket, objectKey);
   if (!exists) {
-    throw Error(`Object does not exist: ${objectKey}`);
+    return {
+      found: false,
+      signedDownloadUrl: "",
+      size: 0,
+      objectKey,
+    };
   }
 
   const url = await getSignedDownloadUrl(bucket, objectKey, 60 * 60);
 
   return {
+    found: true,
     signedDownloadUrl: url,
     size: size || 0,
     objectKey,
   };
+};
+
+export const checkFileExists = async (a: {
+  zone: KacheryZone;
+  hash: string;
+  hashAlg: string;
+}): Promise<boolean> => {
+  if (!a.zone.bucketUri) {
+    throw Error(`Bucket URI not set for zone: ${a.zone.zoneName}`);
+  }
+  const h = a.hash;
+  const objectKey = joinKeys(
+    a.zone.directory || "",
+    `${a.hashAlg}/${h[0]}${h[1]}/${h[2]}${h[3]}/${h[4]}${h[5]}/${a.hash}`,
+  );
+
+  if (!a.zone.bucketUri) {
+    throw Error(`Bucket URI not set for zone: ${a.zone.zoneName}`);
+  }
+  if (!a.zone.credentials) {
+    throw Error(`Credentials not set for zone: ${a.zone.zoneName}`);
+  }
+  const bucket: Bucket = {
+    uri: a.zone.bucketUri,
+    credentials: a.zone.credentials,
+  };
+  const { exists } = await objectExists(bucket, objectKey);
+  return exists;
 };
 
 export const createSignedUploadUrl = async (a: {

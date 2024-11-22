@@ -24,7 +24,7 @@ jobs:
         run: cd python && pip install -e .[compute_resource]
       # -
       # name: Install packages needed for tests
-      # run: pip install pytest pytest-asyncio pytest-cov boto3 kachery_cloud
+      # run: pip install pytest pytest-asyncio pytest-cov boto3
       # -
       # name: Run non-api tests
       # run: cd python && pytest -m "not api" tests/ # make sure we are not depending on any of the additional packages in requirements.txt

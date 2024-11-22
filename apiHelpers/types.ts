@@ -56,6 +56,7 @@ export type KacheryUser = {
   userId: string;
   name: string;
   email: string;
+  researchDescription?: string;
   apiKey: string | null;
 };
 
@@ -64,6 +65,7 @@ export const isKacheryUser = (x: any): x is KacheryUser => {
     userId: isString,
     name: isString,
     email: isString,
+    researchDescription: optional(isString),
     apiKey: isOneOf([isString, isNull]),
   });
 };
@@ -126,6 +128,7 @@ export type SetUserInfoRequest = {
   userId: string;
   name?: string;
   email?: string;
+  researchDescription?: string;
 };
 
 export const isSetUserInfoRequest = (x: any): x is SetUserInfoRequest => {
@@ -134,6 +137,7 @@ export const isSetUserInfoRequest = (x: any): x is SetUserInfoRequest => {
     userId: isString,
     name: optional(isString),
     email: optional(isString),
+    researchDescription: optional(isString),
   });
 };
 
@@ -144,6 +148,56 @@ export type SetUserInfoResponse = {
 export const isSetUserInfoResponse = (x: any): x is SetUserInfoResponse => {
   return validateObject(x, {
     type: isEqualTo("setUserInfoResponse"),
+  });
+};
+
+// getUser
+
+export type GetUserRequest = {
+  type: "getUserRequest";
+  userId: string;
+};
+
+export const isGetUserRequest = (x: any): x is GetUserRequest => {
+  return validateObject(x, {
+    type: isEqualTo("getUserRequest"),
+    userId: isString,
+  });
+};
+
+export type GetUserResponse = {
+  type: "getUserResponse";
+  user: KacheryUser;
+};
+
+export const isGetUserResponse = (x: any): x is GetUserResponse => {
+  return validateObject(x, {
+    type: isEqualTo("getUserResponse"),
+    user: isKacheryUser,
+  });
+};
+
+// getUsers
+
+export type GetUsersRequest = {
+  type: "getUsersRequest";
+};
+
+export const isGetUsersRequest = (x: any): x is GetUsersRequest => {
+  return validateObject(x, {
+    type: isEqualTo("getUsersRequest"),
+  });
+};
+
+export type GetUsersResponse = {
+  type: "getUsersResponse";
+  users: KacheryUser[];
+};
+
+export const isGetUsersResponse = (x: any): x is GetUsersResponse => {
+  return validateObject(x, {
+    type: isEqualTo("getUsersResponse"),
+    users: isArrayOf(isKacheryUser),
   });
 };
 
@@ -329,6 +383,7 @@ export type InitiateFileUploadRequest = {
   hashAlg: string;
   hash: string;
   zoneName: string;
+  workToken: string;
 };
 
 export const isInitiateFileUploadRequest = (
@@ -340,6 +395,7 @@ export const isInitiateFileUploadRequest = (
     hashAlg: isString,
     hash: isString,
     zoneName: isString,
+    workToken: isString,
   });
 };
 

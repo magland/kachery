@@ -1,5 +1,9 @@
 import { getMongoClient } from "./getMongoClient"; // remove .js for local dev
-import { createSignedUploadUrl, createSignedDownloadUrl } from "./signedUrls"; // remove .js for local dev
+import {
+  createSignedUploadUrl,
+  createSignedDownloadUrl,
+  checkFileExists,
+} from "./signedUrls"; // remove .js for local dev
 import { KacheryZone } from "./types"; // remove .js for local dev
 
 export const initiateUpload = async (a: {
@@ -28,52 +32,26 @@ export const initiateUpload = async (a: {
   if (!isValidSha1(a.hash)) {
     throw Error(`Invalid hash: ${a.hash}`);
   }
-  const { found } = await findFile({
+  const exists = await checkFileExists({
     zone: a.zone,
-    userId: a.userId,
     hash: a.hash,
     hashAlg: a.hashAlg,
   });
-  if (found) {
+  if (exists) {
     return {
       alreadyExists: true,
       alreadyPending: false,
     };
   }
-  const pendingUpload = await getPendingUpload({
+  // note: already pending is always going to be false, because it's tricky to
+  // know how to do this right since we can't track whether an upload got
+  // interrupted
+  const { signedUploadUrl, objectKey } = await createSignedUploadUrl({
     zone: a.zone,
+    size: a.size,
     hash: a.hash,
     hashAlg: a.hashAlg,
   });
-  if (pendingUpload) {
-    return {
-      alreadyExists: false,
-      alreadyPending: true,
-    };
-  }
-  let signedUploadUrl: string;
-  let objectKey: string;
-  try {
-    await setPendingUpload({
-      zone: a.zone,
-      hash: a.hash,
-      hashAlg: a.hashAlg,
-    });
-    const x = await createSignedUploadUrl({
-      zone: a.zone,
-      size: a.size,
-      hash: a.hash,
-      hashAlg: a.hashAlg,
-    });
-    signedUploadUrl = x.signedUploadUrl;
-    objectKey = x.objectKey;
-  } finally {
-    await clearPendingUpload({
-      zone: a.zone,
-      hash: a.hash,
-      hashAlg: a.hashAlg,
-    });
-  }
   await recordUpload({
     stage: "initiate",
     timestamp: Date.now(),
@@ -83,7 +61,6 @@ export const initiateUpload = async (a: {
     hash: a.hash,
     hashAlg: a.hashAlg,
     objectKey,
-    bucketUri: a.zone.bucketUri,
   });
   return {
     alreadyExists: false,
@@ -106,7 +83,7 @@ export const finalizeUpload = async (a: {
   if (!a.zone.bucketUri) {
     throw Error(`Bucket URI not set for zone: ${a.zone.zoneName}`);
   }
-  await recordDownload({
+  await recordUpload({
     stage: "finalize",
     timestamp: Date.now(),
     zone: a.zone,
@@ -115,14 +92,13 @@ export const finalizeUpload = async (a: {
     hash: a.hash,
     hashAlg: a.hashAlg,
     objectKey: a.objectKey,
-    bucketUri: a.zone.bucketUri,
   });
   return {
     success: true,
   };
 };
 
-const signedDownloadUrlCache = new Map<
+const signedDownloadUrlMemoryCache = new Map<
   string,
   {
     url: string;
@@ -149,8 +125,10 @@ export const findFile = async (a: {
   if (!a.zone.bucketUri) {
     throw Error(`Bucket URI not set for zone: ${a.zone.zoneName}`);
   }
+
+  // first check the memory cache
   const k = `${a.zone.zoneName}:${a.hashAlg}:${a.hash}`;
-  const cached = signedDownloadUrlCache.get(k);
+  const cached = signedDownloadUrlMemoryCache.get(k);
   if (cached) {
     if (cached.expires > Date.now()) {
       return {
@@ -162,17 +140,52 @@ export const findFile = async (a: {
         cacheHit: true,
       };
     } else {
-      signedDownloadUrlCache.delete(k);
+      signedDownloadUrlMemoryCache.delete(k);
     }
   }
 
-  const { signedDownloadUrl, size, objectKey } = await createSignedDownloadUrl({
+  const d = await findRecordedDownload({
     zone: a.zone,
     hash: a.hash,
     hashAlg: a.hashAlg,
+    minimumTimestamp: Date.now() - 1000 * 60 * 10, // last 10 minutes
+  });
+  if (d) {
+    return {
+      found: true,
+      url: d.downloadUrl,
+      size: d.size,
+      bucketUri: a.zone.bucketUri,
+      objectKey: d.objectKey,
+      cacheHit: true,
+    };
+  }
+
+  const { found, signedDownloadUrl, size, objectKey } =
+    await createSignedDownloadUrl({
+      zone: a.zone,
+      hash: a.hash,
+      hashAlg: a.hashAlg,
+    });
+
+  if (!found) {
+    return {
+      found: false,
+    };
+  }
+
+  await recordDownload({
+    timestamp: Date.now(),
+    zone: a.zone,
+    userId: a.userId || "",
+    size,
+    hash: a.hash,
+    hashAlg: a.hashAlg,
+    objectKey,
+    downloadUrl: signedDownloadUrl,
   });
 
-  signedDownloadUrlCache.set(k, {
+  signedDownloadUrlMemoryCache.set(k, {
     url: signedDownloadUrl,
     expires: Date.now() + 1000 * 60 * 10,
     size,
@@ -204,7 +217,6 @@ const recordUpload = async (a: {
   hash: string;
   hashAlg: string;
   objectKey: string;
-  bucketUri: string;
 }) => {
   const client = await getMongoClient();
   const collection = client
@@ -213,18 +225,17 @@ const recordUpload = async (a: {
   await collection.insertOne({
     stage: a.stage,
     timestamp: a.timestamp,
-    zone: a.zone,
+    zoneName: a.zone.zoneName,
+    bucketUri: a.zone.bucketUri,
     userId: a.userId,
     size: a.size,
     hash: a.hash,
     hashAlg: a.hashAlg,
     objectKey: a.objectKey,
-    bucketUri: a.bucketUri,
   });
 };
 
 const recordDownload = async (a: {
-  stage: "initiate" | "finalize";
   timestamp: number;
   zone: KacheryZone;
   userId: string;
@@ -232,69 +243,51 @@ const recordDownload = async (a: {
   hash: string;
   hashAlg: string;
   objectKey: string;
-  bucketUri: string;
+  downloadUrl: string;
 }) => {
   const client = await getMongoClient();
   const collection = client
     .db(dbName)
     .collection(collectionNames.downloadRecords);
   await collection.insertOne({
-    stage: a.stage,
     timestamp: a.timestamp,
-    zone: a.zone,
+    zoneName: a.zone.zoneName,
+    bucketUri: a.zone.bucketUri,
     userId: a.userId,
     size: a.size,
     hash: a.hash,
     hashAlg: a.hashAlg,
     objectKey: a.objectKey,
-    bucketUri: a.bucketUri,
+    downloadUrl: a.downloadUrl,
   });
 };
 
-// NOTE: the following in-memory check only works when the requests are coming into the same 'serverless' server
-// To be more rigorous, we should use a database. But not going to do that for now.
-const pendingUploadCache = new Map<
-  string,
-  {
-    expires: number;
-  }
->();
-
-const getPendingUpload = async (a: {
+const findRecordedDownload = async (a: {
   zone: KacheryZone;
   hash: string;
   hashAlg: string;
-}): Promise<boolean> => {
-  const k = `${a.zone.zoneName}:${a.hashAlg}:${a.hash}`;
-  const cached = pendingUploadCache.get(k);
-  if (cached) {
-    if (cached.expires > Date.now()) {
-      return true;
-    } else {
-      pendingUploadCache.delete(k);
-    }
-  }
-  return false;
-};
-
-const setPendingUpload = async (a: {
-  zone: KacheryZone;
-  hash: string;
-  hashAlg: string;
-}) => {
-  const k = `${a.zone.zoneName}:${a.hashAlg}:${a.hash}`;
-  pendingUploadCache.set(k, {
-    expires: Date.now() + 1000 * 60 * 30,
+  minimumTimestamp: number;
+}): Promise<{
+  downloadUrl: string;
+  size: number;
+  objectKey: string;
+} | null> => {
+  const client = await getMongoClient();
+  const collection = client
+    .db(dbName)
+    .collection(collectionNames.downloadRecords);
+  const doc = await collection.findOne({
+    zoneName: a.zone.zoneName,
+    hash: a.hash,
+    hashAlg: a.hashAlg,
+    timestamp: { $gte: a.minimumTimestamp },
   });
-};
-
-const clearPendingUpload = async (a: {
-  zone: KacheryZone;
-  hash: string;
-  hashAlg: string;
-}) => {
-  const k = `${a.zone.zoneName}:${a.hashAlg}:${a.hash}`;
-  pendingUploadCache.delete(k);
+  if (!doc) return null;
+  return {
+    downloadUrl: doc.downloadUrl,
+    size: doc.size,
+    objectKey: doc.objectKey,
+  };
 };
 
 const maxSizeForZone = (zone: KacheryZone) => {

@@ -45,6 +45,28 @@ def store_file(
         timer = time.time()
         response = None
         while True:
+            KACHERY_API_KEY = os.environ.get("KACHERY_API_KEY")
+            if not KACHERY_API_KEY:
+                print("")
+                print(
+                    " ".join(
+                        """Kachery let's scientist store data files in the cloud for the purpose of using
+cloud-based visualization tools and collaborating with others. This is a free
+service when used for scientific research purposes. In order to use it, you must
+register using your GitHub account, provide your email, and briefly describe the purpose of your
+research. To register, visit https://kachery.vercel.app. Then set the
+KACHERY_API_KEY environment variable to your API key. For more information,
+visit https://github.com/magland/kachery.
+""".split(
+                            "\n"
+                        )
+                    )
+                )
+                print("")
+                # wait until the user presses enter
+                input("Press Enter to continue...")
+                raise Exception("KACHERY_API_KEY environment variable is not set")
+
             response = _initiate_file_upload_request(
                 size=size, hash_alg=alg, hash=hash0, zone=kachery_zone
             )
@@ -97,14 +119,12 @@ def store_file(
         hash0 = None  # only computed if needed
 
     if cache_locally:
-        kachery_cloud_dir = get_kachery_dir()
+        kachery_dir = get_kachery_dir()
         if hash0 is None:
             # this would be None for custom storage backend
             hash0 = _compute_file_hash(filename, algorithm="sha1")
         e = hash0
-        cache_parent_dir = (
-            f"{kachery_cloud_dir}/hash0/{e[0]}{e[1]}/{e[2]}{e[3]}/{e[4]}{e[5]}"
-        )
+        cache_parent_dir = f"{kachery_dir}/hash0/{e[0]}{e[1]}/{e[2]}{e[3]}/{e[4]}{e[5]}"
         if not os.path.exists(cache_parent_dir):
             _makedirs(cache_parent_dir)
         cache_filename = f"{cache_parent_dir}/{hash0}"

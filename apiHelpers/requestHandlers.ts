@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { VercelRequest, VercelResponse } from "@vercel/node";
+import crypto from "crypto";
 import allowCors from "./allowCors"; // remove .js for local dev
 import { getMongoClient } from "./getMongoClient"; // remove .js for local dev
 import {
@@ -32,6 +33,8 @@ import {
   FinalizeFileUploadResponse,
   isFindFileRequest,
   FindFileResponse,
+  isGetUserRequest,
+  GetUserResponse,
 } from "./types"; // remove .js for local dev
 import { initiateUpload, finalizeUpload, findFile } from "./core"; // remove .js for local dev
 
@@ -56,6 +59,14 @@ export const addZoneHandler = allowCors(
     }
     const { zoneName, userId } = rr;
     try {
+      if (!isValidZoneName(zoneName)) {
+        res.status(400).json({ error: "Invalid zone name" });
+        return;
+      }
+      if (!isValidUserId(userId)) {
+        res.status(400).json({ error: "Invalid user ID" });
+        return;
+      }
       const gitHubAccessToken = req.headers.authorization?.split(" ")[1]; // Extract the token
       if (
         !(await authenticateUserUsingGitHubToken(userId, gitHubAccessToken))
@@ -99,6 +110,10 @@ export const getZoneHandler = allowCors(
       return;
     }
     try {
+      if (!isValidZoneName(rr.zoneName)) {
+        res.status(400).json({ error: "Invalid zone name" });
+        return;
+      }
       const zone = await fetchZone(rr.zoneName, { includeCredentials: false });
       if (!zone) {
         res.status(404).json({ error: `Zone not found: ${rr.zoneName}` });
@@ -130,6 +145,10 @@ export const getZonesHandler = allowCors(
         return;
       }
       const { userId } = rr;
+      if (!isValidUserId(userId || "")) {
+        res.status(400).json({ error: "Invalid user ID" });
+        return;
+      }
       const zones = userId
         ? await fetchZonesForUser(userId, { includeCredentials: false })
         : await fetchAllZones();
@@ -154,6 +173,10 @@ export const deleteZoneHandler = allowCors(
       return;
     }
     try {
+      if (!isValidZoneName(rr.zoneName)) {
+        res.status(400).json({ error: "Invalid zone name" });
+        return;
+      }
       const zone = await fetchZone(rr.zoneName, { includeCredentials: false });
       if (!zone) {
         res.status(404).json({ error: `Zone not found: ${rr.zoneName}` });
@@ -190,6 +213,10 @@ export const setZoneInfoHandler = allowCors(
       return;
     }
     try {
+      if (!isValidZoneName(rr.zoneName)) {
+        res.status(400).json({ error: "Invalid zone name" });
+        return;
+      }
       const zone = await fetchZone(rr.zoneName, { includeCredentials: true });
       if (!zone) {
         res.status(404).json({ error: `Zone not found: ${rr.zoneName}` });
@@ -215,9 +242,27 @@ export const setZoneInfoHandler = allowCors(
       if (rr.users !== undefined) update["users"] = rr.users;
       if (rr.publicDownload !== undefined)
         update["publicDownload"] = rr.publicDownload;
-      if (rr.bucketUri !== undefined) update["bucketUri"] = rr.bucketUri;
-      if (rr.credentials !== undefined) update["credentials"] = rr.credentials;
-      if (rr.directory !== undefined) update["directory"] = rr.directory;
+      if (rr.bucketUri !== undefined) {
+        if (!isValidBucketUri(rr.bucketUri)) {
+          res.status(400).json({ error: "Invalid bucket URI" });
+          return;
+        }
+        update["bucketUri"] = rr.bucketUri;
+      }
+      if (rr.credentials !== undefined) {
+        if (!isValidCredentials(rr.credentials)) {
+          res.status(400).json({ error: "Invalid credentials" });
+          return;
+        }
+        update["credentials"] = rr.credentials;
+      }
+      if (rr.directory !== undefined) {
+        if (!isValidDirectory(rr.directory)) {
+          res.status(400).json({ error: "Invalid directory" });
+          return;
+        }
+        update["directory"] = rr.directory;
+      }
       await updateZone(rr.zoneName, update);
       const resp: SetZoneInfoResponse = {
         type: "setZoneInfoResponse",
@@ -249,6 +294,10 @@ export const addUserHandler = allowCors(
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
+    if (!isValidUserId(rr.userId)) {
+      res.status(400).json({ error: "Invalid user ID" });
+      return;
+    }
     const user = await fetchUser(rr.userId);
     if (user !== null) {
       res.status(400).json({ error: "User already exists" });
@@ -259,6 +308,7 @@ export const addUserHandler = allowCors(
         userId: rr.userId,
         name: "",
         email: "",
+        researchDescription: "",
         apiKey: null,
       };
       await insertUser(user);
@@ -298,6 +348,7 @@ export const resetUserApiKeyHandler = allowCors(
         userId: rr.userId,
         name: "",
         email: "",
+        researchDescription: "",
         apiKey: null,
       };
       await insertUser(user);
@@ -339,8 +390,25 @@ export const setUserInfoHandler = allowCors(
     }
     try {
       const update: { [key: string]: any } = {};
-      if (rr.name !== undefined) update["name"] = rr.name;
-      if (rr.email !== undefined) update["email"] = rr.email;
+      if (rr.name !== undefined) {
+        if (!isValidName(rr.name)) {
+          res.status(400).json({ error: "Invalid name" });
+          return;
+        }
+        update["name"] = rr.name;
+      }
+      if (rr.email !== undefined) {
+        if (!isValidEmail(rr.email)) {
+          update["email"] = rr.email;
+        }
+      }
+      if (rr.researchDescription !== undefined) {
+        if (!isValidResearchDescription(rr.researchDescription)) {
+          res.status(400).json({ error: "Invalid research description" });
+          return;
+        }
+        update["researchDescription"] = rr.researchDescription;
+      }
       await updateUser(rr.userId, update);
       const resp: SetUserInfoResponse = {
         type: "setUserInfoResponse",
@@ -353,6 +421,92 @@ export const setUserInfoHandler = allowCors(
   },
 );
 
+// getUser handler
+export const getUserHandler = allowCors(
+  async (req: VercelRequest, res: VercelResponse) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+    const rr = req.body;
+    if (!isGetUserRequest(rr)) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+    try {
+      const githubAccessToken = req.headers.authorization?.split(" ")[1]; // Extract the token
+      if (!githubAccessToken) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const authUserId = await getUserIdForGitHubAccessToken(githubAccessToken);
+      if (!authUserId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      if (authUserId !== rr.userId && authUserId !== "github|magland") {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const user = await fetchUser(rr.userId);
+      if (!user) {
+        res.status(404).json({ error: `User not found: ${rr.userId}` });
+        return;
+      }
+      user.apiKey = user.apiKey ? "********" : "";
+      const resp: GetUserResponse = {
+        type: "getUserResponse",
+        user,
+      };
+      res.status(200).json(resp);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
+  },
+);
+
+// getUsers handler
+export const getUsersHandler = allowCors(
+  async (req: VercelRequest, res: VercelResponse) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+    try {
+      const githubAccessToken = req.headers.authorization?.split(" ")[1]; // Extract the token
+      if (!githubAccessToken) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const authUserId = await getUserIdForGitHubAccessToken(githubAccessToken);
+      if (!authUserId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      if (authUserId !== "github|magland") {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const client = await getMongoClient();
+      const collection = client.db(dbName).collection(collectionNames.users);
+      const users = await collection.find({}).toArray();
+      for (const user of users) {
+        removeMongoId(user);
+        if (!isKacheryUser(user)) {
+          throw Error("Invalid user in database");
+        }
+        user.apiKey = user.apiKey ? "********" : "";
+      }
+      res.status(200).json({ users });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
+  },
+);
+
+// initiateFileUpload handler
 export const initiateFileUploadHandler = allowCors(
   async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
@@ -361,16 +515,45 @@ export const initiateFileUploadHandler = allowCors(
       return;
     }
     try {
-      const { size, hashAlg, hash, zoneName } = rr;
-      const authorizationToken = req.headers.authorization?.split(" ")[1]; // Extract the token
-      if (!authorizationToken) {
-        res.status(400).json({ error: "User API token must be provided" });
+      const { size, hashAlg, hash, zoneName, workToken } = rr;
+      if (!isValidHash(hash, hashAlg)) {
+        res.status(400).json({ error: "Invalid hash" });
         return;
       }
-      const userId = await getUserIdFromApiToken(authorizationToken);
-      if (!userId) {
-        res.status(401).json({ error: "Unauthorized - no user for token" });
-        return;
+      const apiToken = req.headers.authorization?.split(" ")[1]; // Extract the token
+      if (!apiToken) {
+        if (zoneName !== "scratch") {
+          res.status(400).json({
+            error: `User API token must be provided for zone ${zoneName}`,
+          });
+          return;
+        }
+      }
+      checkWorkToken(workToken, hash);
+      let userId: string = "";
+      if (apiToken) {
+        userId = await getUserIdFromApiToken(apiToken);
+        if (!userId) {
+          res.status(401).json({ error: "Unauthorized - no user for token" });
+          return;
+        }
+        const user = await fetchUser(userId);
+        if (!user) {
+          res.status(400).json({ error: `User not found: ${userId}` });
+          return;
+        }
+        if (!user.email) {
+          res
+            .status(400)
+            .json({ error: `User email not set for user: ${userId}` });
+          return;
+        }
+        if (!user.researchDescription) {
+          res.status(400).json({
+            error: `User research description not set for user: ${userId}`,
+          });
+          return;
+        }
       }
       const zone = await fetchZone(zoneName, { includeCredentials: true });
       if (!zone) {
@@ -406,6 +589,7 @@ export const initiateFileUploadHandler = allowCors(
   },
 );
 
+// finalizeFileUpload handler
 export const finalizeFileUploadHandler = allowCors(
   async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
@@ -415,15 +599,26 @@ export const finalizeFileUploadHandler = allowCors(
     }
     try {
       const { size, hashAlg, hash, zoneName, objectKey } = rr;
-      const authorizationToken = req.headers.authorization?.split(" ")[1]; // Extract the token
-      if (!authorizationToken) {
-        res.status(400).json({ error: "User API token must be provided" });
+      if (!isValidHash(hash, hashAlg)) {
+        res.status(400).json({ error: "Invalid hash" });
         return;
       }
-      const userId = await getUserIdFromApiToken(authorizationToken);
-      if (!userId) {
-        res.status(401).json({ error: "Unauthorized - no user for token" });
-        return;
+      const authorizationToken = req.headers.authorization?.split(" ")[1]; // Extract the token
+      if (!authorizationToken) {
+        if (zoneName !== "scratch") {
+          res.status(400).json({
+            error: `User API token must be provided for zone ${zoneName}`,
+          });
+          return;
+        }
+      }
+      let userId: string = "";
+      if (authorizationToken) {
+        userId = await getUserIdFromApiToken(authorizationToken);
+        if (!userId) {
+          res.status(401).json({ error: "Unauthorized - no user for token" });
+          return;
+        }
       }
       const zone = await fetchZone(zoneName, { includeCredentials: true });
       if (!zone) {
@@ -456,6 +651,7 @@ export const finalizeFileUploadHandler = allowCors(
   },
 );
 
+// findFile handler
 export const findFileHandler = allowCors(
   async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
@@ -465,6 +661,10 @@ export const findFileHandler = allowCors(
     }
     try {
       const { hashAlg, hash, zoneName } = rr;
+      if (!isValidHash(hash, hashAlg)) {
+        res.status(400).json({ error: "Invalid hash" });
+        return;
+      }
       const zone = await fetchZone(zoneName, { includeCredentials: true });
       if (!zone) {
         res.status(400).json({ error: `Zone not found: ${zoneName}` });
@@ -481,12 +681,10 @@ export const findFileHandler = allowCors(
       }
       if (!zone.publicDownload) {
         if (!userId) {
-          res
-            .status(401)
-            .json({
-              error:
-                "User API token must be provided when zone does not allow public download",
-            });
+          res.status(401).json({
+            error:
+              "User API token must be provided when zone does not allow public download",
+          });
           return;
         }
         if (!userIsAllowedToDownloadFilesForZone(zone, userId)) {
@@ -531,6 +729,52 @@ export const findFileHandler = allowCors(
 //   if (user.apiKey !== authorizationToken) return false;
 //   return true;
 // };
+
+const isValidHash = (hash: string, hashAlg: string) => {
+  if (hashAlg !== "sha1") return false;
+  if (!/^[0-9a-f]{40}$/.test(hash)) return false;
+  return true;
+};
+
+const isValidZoneName = (zoneName: string) => {
+  if (zoneName.length > 100) return false;
+  return true;
+};
+
+const isValidUserId = (userId: string) => {
+  if (userId.length > 100) return false;
+  return true;
+};
+
+const isValidName = (name: string) => {
+  if (name.length > 200) return false;
+  return true;
+};
+
+const isValidEmail = (email: string) => {
+  if (email.length > 200) return false;
+  return true;
+};
+
+const isValidResearchDescription = (researchDescription: string) => {
+  if (researchDescription.length > 2000) return false;
+  return true;
+};
+
+const isValidBucketUri = (bucketUri: string) => {
+  if (bucketUri.length > 200) return false;
+  return true;
+};
+
+const isValidCredentials = (credentials: string) => {
+  if (credentials.length > 2000) return false;
+  return true;
+};
+
+const isValidDirectory = (directory: string) => {
+  if (directory.length > 200) return false;
+  return true;
+};
 
 const getUserIdFromApiToken = async (
   authorizationToken: string,
@@ -641,6 +885,7 @@ const fetchUser = async (userId: string) => {
   if (!user) return null;
   removeMongoId(user);
   if (!isKacheryUser(user)) {
+    console.warn("Invalid user in database", JSON.stringify(user));
     throw Error("Invalid user in database");
   }
   return user;
@@ -654,6 +899,7 @@ const fetchUserForApiToken = async (apiKey: string) => {
   if (!user) return null;
   removeMongoId(user);
   if (!isKacheryUser(user)) {
+    console.warn("Invalid user in database", JSON.stringify(user));
     throw Error("Invalid user in database");
   }
   return user;
@@ -735,6 +981,10 @@ const userIsAllowedToUploadFilesForZone = (
   zone: KacheryZone,
   userId: string,
 ) => {
+  if (zone.zoneName === "scratch") return true;
+  if (!userId) {
+    return false;
+  }
   if (zone.userId === userId) return true;
   const u = zone.users.find((u) => u.userId === userId);
   if (!u) return false;
@@ -796,4 +1046,27 @@ export const JSONStringifyDeterministic = (
   });
   allKeys.sort();
   return JSON.stringify(obj, allKeys, space);
+};
+
+const checkWorkToken = (workToken: string, hash: string) => {
+  const bits = sha1Bits(hash + workToken);
+  // difficulty is hard-coded at 13 for now. It's around 15 milliseconds of work.
+  const difficulty = 13;
+  const prefix = "0".repeat(difficulty);
+  if (!bits.startsWith(prefix)) {
+    throw Error("Invalid work token");
+  }
+};
+
+const sha1 = (input: string) => {
+  const sha1 = crypto.createHash("sha1");
+  sha1.update(input);
+  return sha1.digest("hex");
+};
+
+const sha1Bits = (input: string) => {
+  const hash = sha1(input);
+  const bits = BigInt("0x" + hash).toString(2);
+  const expectedLength = hash.length * 4;
+  return bits.padStart(expectedLength, "0");
 };

@@ -25,7 +25,12 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "kachery=kachery.cli:main",
-        ],
+            "kachery = kachery.cli:cli",
+            "kachery-store = kachery.cli:store_file",
+            "kachery-load = kachery.cli:load_file",
+            "kachery-load-info = kachery.cli:load_file_info",
+            "kachery-cat = kachery.cli:cat_file",
+            "kachery-store-local = kachery.cli:store_file_local",
+        ]
     },
 )

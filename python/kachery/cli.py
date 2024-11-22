@@ -23,6 +23,7 @@ def store_file(filename: str, cache_locally: bool, label: str):
 @click.argument("uri")
 @click.option("--dest", required=False, default="")
 def load_file(uri: str, dest: str):
+    print(f"Loading file: {uri}")
     fname = k2.load_file(uri, dest=dest if len(dest) > 0 else None)
     if fname is not None:
         print(fname)

@@ -27,12 +27,12 @@ def _load_sha1_file_from_cloud(
         del response["url"]
         return response
 
-    kachery_cloud_dir = get_kachery_dir()
+    kachery_dir = get_kachery_dir()
     e = sha1
-    parent_dir = f"{kachery_cloud_dir}/sha1/{e[0]}{e[1]}/{e[2]}{e[3]}/{e[4]}{e[5]}"
+    parent_dir = f"{kachery_dir}/sha1/{e[0]}{e[1]}/{e[2]}{e[3]}/{e[4]}{e[5]}"
     filename = f"{parent_dir}/{sha1}"
     if verbose:
-        print(f"Loading file from kachery cloud: {uri}")
+        print(f"Loading file from kachery: {uri}")
     if not os.path.exists(parent_dir):
         _makedirs(parent_dir)
     tmp_filename = f"{filename}.tmp.{_random_string(8)}"

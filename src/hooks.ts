@@ -5,16 +5,21 @@ import {
   AddZoneRequest,
   ComputeUserStatsRequest,
   DeleteZoneRequest,
+  GetUserRequest,
   GetZoneRequest,
   GetZonesRequest,
+  KacheryUser,
   KacheryZone,
   KacheryZoneUser,
+  SetUserInfoRequest,
   SetZoneInfoRequest,
   UserStats,
   isAddZoneResponse,
   isComputeUserStatsResponse,
+  isGetUserResponse,
   isGetZoneResponse,
   isGetZonesResponse,
+  isSetUserInfoResponse,
   isSetZoneInfoResponse,
 } from "./types";
 
@@ -159,6 +164,56 @@ export const useZone = (zoneName: string) => {
     setZoneInfo,
     refreshZone,
   };
+};
+
+export const useUser = (userId: string) => {
+  const [user, setUser] = useState<KacheryUser | undefined>(undefined);
+  const [refreshCode, setRefreshCode] = useState(0);
+  const { githubAccessToken } = useLogin();
+  useEffect(() => {
+    let canceled = false;
+    setUser(undefined);
+    if (!userId) return;
+    if (!githubAccessToken) return;
+    (async () => {
+      const req: GetUserRequest = {
+        type: "getUserRequest",
+        userId,
+      };
+      const resp = await apiPostRequest("getUser", req, githubAccessToken);
+      if (!resp) return;
+      if (canceled) return;
+      if (!isGetUserResponse(resp)) {
+        console.error("Invalid response", resp);
+        return;
+      }
+      setUser(resp.user);
+    })();
+    return () => {
+      canceled = true;
+    };
+  }, [userId, refreshCode, githubAccessToken]);
+  const setUserInfo = useCallback(
+    async (o: { email?: string; researchDescription?: string }) => {
+      if (!githubAccessToken) throw Error("Missing githubAccessToken");
+      const { email, researchDescription } = o;
+      if (!userId) return;
+      const req: SetUserInfoRequest = {
+        type: "setUserInfoRequest",
+        userId,
+        email,
+        researchDescription,
+      };
+      const resp = await apiPostRequest("setUserInfo", req, githubAccessToken);
+      if (!isSetUserInfoResponse(resp)) {
+        console.error("Invalid response", resp);
+        return;
+      }
+      setRefreshCode((c) => c + 1);
+    },
+    [userId, githubAccessToken],
+  );
+  return { user, setUserInfo };
 };
 
 export const useUserStats = (userId: string) => {

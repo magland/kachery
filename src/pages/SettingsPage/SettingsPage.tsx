@@ -1,6 +1,6 @@
 import { FunctionComponent, useCallback, useState } from "react";
 import { ResetUserApiKeyRequest, isResetUserApiKeyResponse } from "../../types";
-import { apiPostRequest } from "../../hooks";
+import { apiPostRequest, useUser } from "../../hooks";
 import useRoute from "../../useRoute";
 import { useLogin } from "../../LoginContext/LoginContext";
 import LoginButton from "../../LoginButton";
@@ -41,6 +41,8 @@ const SettingsPage: FunctionComponent<SettingsPageProps> = () => {
       setResettingApiKey(false);
     }
   }, [userId, githubAccessToken]);
+  const { user, setUserInfo } = useUser(userId || "");
+  console.log("--- user", user);
   return (
     <div style={{ padding: 30 }}>
       <h3>Settings</h3>
@@ -57,15 +59,62 @@ const SettingsPage: FunctionComponent<SettingsPageProps> = () => {
       <hr />
       {!userId && <p>You must be logged in to obtain an API key.</p>}
       {userId && (
-        <p style={{ maxWidth: 500 }}>
-          An API key is required to submit jobs. Keep your API key secret. If
-          you generate a new API key, the old key will no longer work. You may
-          want to set a DENDRO_API_KEY environment variable on your system.
-        </p>
+        <div>
+          {user && (
+            <table className="table">
+              <tr>
+                <td>User</td>
+                <td>
+                  <UserIdComponent userId={userId} followLink={false} />
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span style={{ color: user.email ? "black" : "red" }}>
+                    Email address {user.email ? "" : "(required for uploading)"}
+                  </span>
+                </td>
+                <td>
+                  <EditEmailAddressComponent
+                    emailAddress={user.email}
+                    setEmailAddress={(x) => {
+                      setUserInfo({ email: x });
+                    }}
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span
+                    style={{
+                      color: user.researchDescription ? "black" : "red",
+                    }}
+                  >
+                    Brief research description{" "}
+                    {user.researchDescription ? "" : "(required for uploading)"}
+                  </span>
+                </td>
+                <td>
+                  <EditResearchDescriptionComponent
+                    researchDescription={user.researchDescription || ""}
+                    setResearchDescription={(x) => {
+                      setUserInfo({ researchDescription: x });
+                    }}
+                  />
+                </td>
+              </tr>
+            </table>
+          )}
+          <p style={{ maxWidth: 500 }}>
+            An API key is required to upload files. Keep your API key secret. If
+            you generate a new API key, the old key will no longer work. You
+            should set the KACHERY_API_KEY environment variable on your system.
+          </p>
+        </div>
       )}
       {userId && !resettingApiKey && (
         <button onClick={handleResetApiKey}>
-          Generate API Key for{" "}
+          Generate API key for{" "}
           <UserIdComponent userId={userId} followLink={false} />
         </button>
       )}
@@ -84,6 +133,80 @@ const SettingsPage: FunctionComponent<SettingsPageProps> = () => {
             </button>
           )}
           {apiKeyCopied && <p>API key copied to clipboard</p>}
+        </div>
+      )}
+    </div>
+  );
+};
+
+type EmailAddressComponentProps = {
+  emailAddress: string;
+  setEmailAddress: (emailAddress: string) => void;
+};
+
+const EditEmailAddressComponent: FunctionComponent<
+  EmailAddressComponentProps
+> = ({ emailAddress, setEmailAddress }) => {
+  const [editing, setEditing] = useState(false);
+  const [newEmailAddress, setNewEmailAddress] = useState(emailAddress);
+  const handleSave = useCallback(() => {
+    setEmailAddress(newEmailAddress);
+    setEditing(false);
+  }, [newEmailAddress, setEmailAddress]);
+  return (
+    <div>
+      {editing ? (
+        <div>
+          <input
+            type="text"
+            value={newEmailAddress}
+            onChange={(e) => setNewEmailAddress(e.target.value)}
+          />
+          <button onClick={handleSave}>Save</button>
+          <button onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      ) : (
+        <div>
+          {emailAddress}&nbsp;
+          <button onClick={() => setEditing(true)}>Edit</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+type ResearchDescriptionComponentProps = {
+  researchDescription: string;
+  setResearchDescription: (researchDescription: string) => void;
+};
+
+const EditResearchDescriptionComponent: FunctionComponent<
+  ResearchDescriptionComponentProps
+> = ({ researchDescription, setResearchDescription }) => {
+  const [editing, setEditing] = useState(false);
+  const [newResearchDescription, setNewResearchDescription] =
+    useState(researchDescription);
+  const handleSave = useCallback(() => {
+    setResearchDescription(newResearchDescription);
+    setEditing(false);
+  }, [newResearchDescription, setResearchDescription]);
+  // Use a <textarea> instead of an <input> element
+
+  return (
+    <div>
+      {editing ? (
+        <div>
+          <textarea
+            value={newResearchDescription}
+            onChange={(e) => setNewResearchDescription(e.target.value)}
+          />
+          <button onClick={handleSave}>Save</button>
+          <button onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      ) : (
+        <div>
+          {researchDescription}&nbsp;
+          <button onClick={() => setEditing(true)}>Edit</button>
         </div>
       )}
     </div>
