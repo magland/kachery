@@ -8,6 +8,7 @@ const allowCors =
       "http://localhost:4200",
       "https://kachery.vercel.app",
       "https://neurosift.app",
+      "https://figurl.org",
     ];
     const origin = req.headers.origin || "";
     if (allowedOrigins.includes(origin)) {

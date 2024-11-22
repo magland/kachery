@@ -22,6 +22,7 @@ pip install -e .
 ```
 
 ## Key Features
+
 - **Content-Addressable Storage**: Files are stored by their SHA-1 hash, ensuring unique identifiers and easy retrieval.
 - **Cloud Integration**: Kachery integrates closely with [Figurl](https://github.com/flatironinstitute/figurl) for browser-based, interactive visualization of scientific datasets.
 - **Collaborative Sharing**: Upload files once and retrieve them on any computer for shared research workflows.

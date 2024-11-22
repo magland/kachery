@@ -79,7 +79,10 @@ export const addZoneHandler = allowCors(
         res.status(401).json({ error: "Only admin can add zones" });
         return;
       }
-      const zone = await fetchZone(zoneName, { includeCredentials: false });
+      const zone = await fetchZone(zoneName, {
+        includeCredentials: false,
+        checkCache: false,
+      });
       if (zone) {
         res.status(500).json({ error: "Zone with this name already exists." });
         return;
@@ -120,7 +123,10 @@ export const getZoneHandler = allowCors(
         res.status(400).json({ error: "Invalid zone name" });
         return;
       }
-      const zone = await fetchZone(rr.zoneName, { includeCredentials: false });
+      const zone = await fetchZone(rr.zoneName, {
+        includeCredentials: false,
+        checkCache: false,
+      });
       if (!zone) {
         res.status(404).json({ error: `Zone not found: ${rr.zoneName}` });
         return;
@@ -183,7 +189,10 @@ export const deleteZoneHandler = allowCors(
         res.status(400).json({ error: "Invalid zone name" });
         return;
       }
-      const zone = await fetchZone(rr.zoneName, { includeCredentials: false });
+      const zone = await fetchZone(rr.zoneName, {
+        includeCredentials: false,
+        checkCache: false,
+      });
       if (!zone) {
         res.status(404).json({ error: `Zone not found: ${rr.zoneName}` });
         return;
@@ -223,7 +232,10 @@ export const setZoneInfoHandler = allowCors(
         res.status(400).json({ error: "Invalid zone name" });
         return;
       }
-      const zone = await fetchZone(rr.zoneName, { includeCredentials: true });
+      const zone = await fetchZone(rr.zoneName, {
+        includeCredentials: true,
+        checkCache: false,
+      });
       if (!zone) {
         res.status(404).json({ error: `Zone not found: ${rr.zoneName}` });
         return;
@@ -306,7 +318,7 @@ export const addUserHandler = allowCors(
       res.status(400).json({ error: "Invalid user ID" });
       return;
     }
-    const user = await fetchUser(rr.userId);
+    const user = await fetchUser(rr.userId, { checkCache: false });
     if (user !== null) {
       res.status(400).json({ error: "User already exists" });
       return;
@@ -350,7 +362,9 @@ export const resetUserApiKeyHandler = allowCors(
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-    let user: KacheryUser | null = await fetchUser(rr.userId);
+    let user: KacheryUser | null = await fetchUser(rr.userId, {
+      checkCache: false,
+    });
     if (user === null) {
       user = {
         userId: rr.userId,
@@ -456,7 +470,7 @@ export const getUserHandler = allowCors(
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
-      const user = await fetchUser(rr.userId);
+      const user = await fetchUser(rr.userId, { checkCache: false });
       if (!user) {
         res.status(404).json({ error: `User not found: ${rr.userId}` });
         return;
@@ -545,7 +559,7 @@ export const initiateFileUploadHandler = allowCors(
           res.status(401).json({ error: "Unauthorized - no user for token" });
           return;
         }
-        const user = await fetchUser(userId);
+        const user = await fetchUser(userId, { checkCache: true });
         if (!user) {
           res.status(400).json({ error: `User not found: ${userId}` });
           return;
@@ -567,7 +581,10 @@ export const initiateFileUploadHandler = allowCors(
           return;
         }
       }
-      const zone = await fetchZone(zoneName, { includeCredentials: true });
+      const zone = await fetchZone(zoneName, {
+        includeCredentials: true,
+        checkCache: true,
+      });
       if (!zone) {
         res.status(400).json({ error: `Zone not found: ${zoneName}` });
         return;
@@ -632,7 +649,10 @@ export const finalizeFileUploadHandler = allowCors(
           return;
         }
       }
-      const zone = await fetchZone(zoneName, { includeCredentials: true });
+      const zone = await fetchZone(zoneName, {
+        includeCredentials: true,
+        checkCache: true,
+      });
       if (!zone) {
         res.status(400).json({ error: `Zone not found: ${zoneName}` });
         return;
@@ -677,7 +697,10 @@ export const findFileHandler = allowCors(
         res.status(400).json({ error: "Invalid hash" });
         return;
       }
-      const zone = await fetchZone(zoneName, { includeCredentials: true });
+      const zone = await fetchZone(zoneName, {
+        includeCredentials: true,
+        checkCache: true,
+      });
       if (!zone) {
         res.status(400).json({ error: `Zone not found: ${zoneName}` });
         return;
@@ -791,7 +814,9 @@ const isValidDirectory = (directory: string) => {
 const getUserIdFromApiToken = async (
   authorizationToken: string,
 ): Promise<string> => {
-  const user = await fetchUserForApiToken(authorizationToken);
+  const user = await fetchUserForApiToken(authorizationToken, {
+    checkCache: true,
+  });
   if (!user) return "";
   return user.userId;
 };
@@ -805,17 +830,35 @@ const authenticateUserUsingGitHubToken = async (
   return userId === githubUserId;
 };
 
+const zoneMemoryCache: {
+  [zoneName: string]: {
+    zone: KacheryZone;
+    timestamp: number;
+  };
+} = {};
+
 const fetchZone = async (
   zoneName: string,
-  o: { includeCredentials: boolean },
+  o: { includeCredentials: boolean; checkCache: boolean },
 ): Promise<KacheryZone | null> => {
-  const client = await getMongoClient();
-  const collection = client.db(dbName).collection(collectionNames.zones);
-  const zone = await collection.findOne({ zoneName });
-  if (!zone) return null;
-  removeMongoId(zone);
-  if (!isKacheryZone(zone)) {
-    throw Error("Invalid zone in database");
+  let zone: KacheryZone | null = null;
+  if (o.checkCache) {
+    const c = zoneMemoryCache[zoneName];
+    if (c && Date.now() - c.timestamp < 1000 * 60) {
+      zone = c.zone;
+    }
+  }
+  if (!zone) {
+    const client = await getMongoClient();
+    const collection = client.db(dbName).collection(collectionNames.zones);
+    const doc = await collection.findOne({ zoneName });
+    if (!doc) return null;
+    removeMongoId(doc);
+    if (!isKacheryZone(doc)) {
+      throw Error("Invalid zone in database");
+    }
+    zone = doc as KacheryZone;
+    zoneMemoryCache[zoneName] = { zone, timestamp: Date.now() };
   }
   if (!o.includeCredentials) {
     zone.credentials = zone.credentials ? "********" : undefined;
@@ -869,6 +912,10 @@ const deleteZone = async (zoneName: string) => {
   const client = await getMongoClient();
   const collection = client.db(dbName).collection(collectionNames.zones);
   await collection.deleteOne({ zoneName });
+  // invalidate cache
+  if (zoneMemoryCache[zoneName]) {
+    delete zoneMemoryCache[zoneName];
+  }
 };
 
 const updateZone = async (zoneName: string, update: any) => {
@@ -888,31 +935,77 @@ const updateZone = async (zoneName: string, update: any) => {
     { zoneName },
     { $set: updateSet, $unset: updateUnset },
   );
+  // invalidate cache
+  if (zoneMemoryCache[zoneName]) {
+    delete zoneMemoryCache[zoneName];
+  }
 };
 
-const fetchUser = async (userId: string) => {
-  const client = await getMongoClient();
-  const collection = client.db(dbName).collection(collectionNames.users);
-  const user = await collection.findOne({ userId });
-  if (!user) return null;
-  removeMongoId(user);
-  if (!isKacheryUser(user)) {
-    console.warn("Invalid user in database", JSON.stringify(user));
-    throw Error("Invalid user in database");
+const userMemoryCache: {
+  [userId: string]: {
+    user: KacheryUser;
+    timestamp: number;
+  };
+} = {};
+
+const fetchUser = async (
+  userId: string,
+  o: { checkCache: boolean },
+): Promise<KacheryUser | null> => {
+  let user: KacheryUser | null = null;
+  if (o.checkCache) {
+    const c = userMemoryCache[userId];
+    if (c && Date.now() - c.timestamp < 1000 * 60) {
+      user = c.user;
+    }
+  }
+  if (!user) {
+    const client = await getMongoClient();
+    const collection = client.db(dbName).collection(collectionNames.users);
+    const doc = await collection.findOne({ userId });
+    if (!doc) return null;
+    removeMongoId(doc);
+    if (!isKacheryUser(doc)) {
+      console.warn("Invalid user in database", JSON.stringify(user));
+      throw Error("Invalid user in database");
+    }
+    user = doc;
+    userMemoryCache[userId] = { user, timestamp: Date.now() };
   }
   return user;
 };
 
-const fetchUserForApiToken = async (apiKey: string) => {
+const userMemoryCacheForApiToken: {
+  [apiKey: string]: {
+    user: KacheryUser;
+    timestamp: number;
+  };
+} = {};
+
+const fetchUserForApiToken = async (
+  apiKey: string,
+  o: { checkCache: boolean },
+): Promise<KacheryUser | null> => {
   if (!apiKey) return null;
-  const client = await getMongoClient();
-  const collection = client.db(dbName).collection(collectionNames.users);
-  const user = await collection.findOne({ apiKey });
-  if (!user) return null;
-  removeMongoId(user);
-  if (!isKacheryUser(user)) {
-    console.warn("Invalid user in database", JSON.stringify(user));
-    throw Error("Invalid user in database");
+  let user: KacheryUser | null = null;
+  if (o.checkCache) {
+    const c = userMemoryCacheForApiToken[apiKey];
+    if (c && Date.now() - c.timestamp < 1000) {
+      user = c.user;
+    }
+  }
+  if (!user) {
+    const client = await getMongoClient();
+    const collection = client.db(dbName).collection(collectionNames.users);
+    const doc = await collection.findOne({ apiKey });
+    if (!doc) return null;
+    removeMongoId(doc);
+    if (!isKacheryUser(doc)) {
+      console.warn("Invalid user in database", JSON.stringify(user));
+      throw Error("Invalid user in database");
+    }
+    user = doc;
+    userMemoryCacheForApiToken[apiKey] = { user, timestamp: Date.now() };
   }
   return user;
 };
@@ -925,6 +1018,15 @@ const insertUser = async (user: KacheryUser) => {
     { $setOnInsert: user },
     { upsert: true },
   );
+  // invalidate caches
+  if (user.userId in userMemoryCache) {
+    delete userMemoryCache[user.userId];
+  }
+  for (const k in userMemoryCacheForApiToken) {
+    if (userMemoryCacheForApiToken[k].user.userId === user.userId) {
+      delete userMemoryCacheForApiToken[k];
+    }
+  }
 };
 
 const updateUser = async (userId: string, update: any) => {
@@ -944,6 +1046,15 @@ const updateUser = async (userId: string, update: any) => {
     { userId },
     { $set: updateSet, $unset: updateUnset },
   );
+  // invalidate caches
+  if (userId in userMemoryCache) {
+    delete userMemoryCache[userId];
+  }
+  for (const k in userMemoryCacheForApiToken) {
+    if (userMemoryCacheForApiToken[k].user.userId === userId) {
+      delete userMemoryCacheForApiToken[k];
+    }
+  }
 };
 
 const removeMongoId = (x: any) => {

@@ -194,7 +194,11 @@ export const useUser = (userId: string) => {
     };
   }, [userId, refreshCode, githubAccessToken]);
   const setUserInfo = useCallback(
-    async (o: { email?: string; researchDescription?: string, name?: string }) => {
+    async (o: {
+      email?: string;
+      researchDescription?: string;
+      name?: string;
+    }) => {
       if (!githubAccessToken) throw Error("Missing githubAccessToken");
       const { email, researchDescription, name } = o;
       if (!userId) return;
@@ -203,7 +207,7 @@ export const useUser = (userId: string) => {
         userId,
         email,
         researchDescription,
-        name
+        name,
       };
       const resp = await apiPostRequest("setUserInfo", req, githubAccessToken);
       if (!isSetUserInfoResponse(resp)) {

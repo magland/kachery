@@ -18,9 +18,6 @@ setup(
         "click",
         "simplejson",
         "numpy",
-        "PyYAML",
-        "pydantic",  # intentionally do not specify version 1 or 2 since we support both
-        "psutil",
         "requests",
     ],
     entry_points={
