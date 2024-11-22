@@ -17,6 +17,7 @@ export type KacheryZone = {
   userId: string;
   users: KacheryZoneUser[];
   publicDownload: boolean;
+  publicUpload?: boolean;
   bucketUri?: string;
   directory?: string;
   credentials?: string;
@@ -28,6 +29,7 @@ export const isKacheryZone = (x: any): x is KacheryZone => {
     userId: isString,
     users: isArrayOf(isKacheryZoneUser),
     publicDownload: isBoolean,
+    publicUpload: optional(isBoolean),
     bucketUri: optional(isString),
     directory: optional(isString),
     credentials: optional(isString),
@@ -305,6 +307,7 @@ export type SetZoneInfoRequest = {
   zoneName: string;
   users?: KacheryZoneUser[];
   publicDownload?: boolean;
+  publicUpload?: boolean;
   bucketUri?: string;
   credentials?: string;
   directory?: string;
@@ -316,6 +319,7 @@ export const isSetZoneInfoRequest = (x: any): x is SetZoneInfoRequest => {
     zoneName: isString,
     users: optional(isArrayOf(isKacheryZoneUser)),
     publicDownload: optional(isBoolean),
+    publicUpload: optional(isBoolean),
     bucketUri: optional(isString),
     credentials: optional(isString),
     directory: optional(isString),

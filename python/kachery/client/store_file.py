@@ -46,21 +46,22 @@ def store_file(
         response = None
         while True:
             KACHERY_API_KEY = os.environ.get("KACHERY_API_KEY")
-            if not KACHERY_API_KEY:
+            if not KACHERY_API_KEY and kachery_zone != "scratch":
                 print("")
                 print(
-                    " ".join(
-                        """Kachery let's scientist store data files in the cloud for the purpose of using
+                    """
+Kachery let's scientist store data files in the cloud for the purpose of using
 cloud-based visualization tools and collaborating with others. This is a free
 service when used for scientific research purposes. In order to use it, you must
-register using your GitHub account, provide your email, and briefly describe the purpose of your
-research. To register, visit https://kachery.vercel.app. Then set the
-KACHERY_API_KEY environment variable to your API key. For more information,
-visit https://github.com/magland/kachery.
-""".split(
-                            "\n"
-                        )
-                    )
+register using your GitHub account, provide your email, and briefly describe the
+purpose of the research. To register, visit https://kachery.vercel.app. Then set
+the KACHERY_API_KEY environment variable to your API key.
+
+Alternatively, you can use the "scratch" zone which is subject to regular deletion
+of files by setting the KACHERY_ZONE environment variable to "scratch".
+
+For more information, visit https://github.com/magland/kachery.
+""".strip()
                 )
                 print("")
                 # wait until the user presses enter

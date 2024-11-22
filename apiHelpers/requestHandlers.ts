@@ -74,6 +74,11 @@ export const addZoneHandler = allowCors(
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
+      if (userId !== "github|magland") {
+        // only magland can add zones for now
+        res.status(401).json({ error: "Only admin can add zones" });
+        return;
+      }
       const zone = await fetchZone(zoneName, { includeCredentials: false });
       if (zone) {
         res.status(500).json({ error: "Zone with this name already exists." });
@@ -84,6 +89,7 @@ export const addZoneHandler = allowCors(
         userId,
         users: [],
         publicDownload: true,
+        publicUpload: false,
       };
       await insertZone(newZone);
       const resp: AddZoneResponse = {
@@ -242,6 +248,8 @@ export const setZoneInfoHandler = allowCors(
       if (rr.users !== undefined) update["users"] = rr.users;
       if (rr.publicDownload !== undefined)
         update["publicDownload"] = rr.publicDownload;
+      if (rr.publicUpload !== undefined)
+        update["publicUpload"] = rr.publicUpload;
       if (rr.bucketUri !== undefined) {
         if (!isValidBucketUri(rr.bucketUri)) {
           res.status(400).json({ error: "Invalid bucket URI" });
@@ -985,6 +993,7 @@ const userIsAllowedToUploadFilesForZone = (
   if (!userId) {
     return false;
   }
+  if (zone.publicUpload) return true;
   if (zone.userId === userId) return true;
   const u = zone.users.find((u) => u.userId === userId);
   if (!u) return false;

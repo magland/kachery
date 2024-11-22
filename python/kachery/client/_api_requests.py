@@ -7,7 +7,7 @@ def _initiate_file_upload_request(
     *, size: int, hash_alg: str, hash: str, zone: str
 ) -> dict:
     KACHERY_API_KEY = os.environ.get("KACHERY_API_KEY")
-    if not KACHERY_API_KEY:
+    if not KACHERY_API_KEY and zone != "scratch":
         raise Exception("KACHERY_API_KEY environment variable is not set")
     # difficulty is hard-coded at 13 for now. It's around 15 milliseconds of work.
     work_token = _create_work_token(hash, difficulty=13)
@@ -20,10 +20,9 @@ def _initiate_file_upload_request(
         "workToken": work_token,
     }
     url = "https://kachery.vercel.app/api/initiateFileUpload"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {KACHERY_API_KEY}",
-    }
+    headers = {"Content-Type": "application/json"}
+    if KACHERY_API_KEY:
+        headers["Authorization"] = f"Bearer {KACHERY_API_KEY}"  # type: ignore
     resp = requests.post(url, json=payload, headers=headers)
     if resp.status_code != 200:
         raise Exception(
@@ -37,7 +36,7 @@ def _finalize_file_upload_request(
     *, object_key: str, hash_alg: str, hash0: str, kachery_zone: str, size: int
 ) -> dict:
     KACHERY_API_KEY = os.environ.get("KACHERY_API_KEY")
-    if not KACHERY_API_KEY:
+    if not KACHERY_API_KEY and kachery_zone != "scratch":
         raise Exception("KACHERY_API_KEY environment variable is not set")
     payload = {
         "type": "finalizeFileUploadRequest",
@@ -48,10 +47,9 @@ def _finalize_file_upload_request(
         "size": size,
     }
     url = "https://kachery.vercel.app/api/finalizeFileUpload"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {KACHERY_API_KEY}",
-    }
+    headers = {"Content-Type": "application/json"}
+    if KACHERY_API_KEY:
+        headers["Authorization"] = f"Bearer {KACHERY_API_KEY}"  # type: ignore
     resp = requests.post(url, json=payload, headers=headers)
     if resp.status_code != 200:
         raise Exception(
