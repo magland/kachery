@@ -116,6 +116,8 @@ For more persistent storage and access, use the **default zone**. To use it, you
 
 The default zone allows uploads from all registered users and is suitable for light usage in scientific research. The intent is for files to be available for long-term use, but we may at some point delete files that have not been accessed for a long time.
 
+For more detailed instruction on registration, see [Registration](doc/registration.md).
+
 ### Custom Zones for Heavier Usage and Greater Reliability
 
 For users with heavier storage needs that is less prone to eventual deletion, we offer the following options:
