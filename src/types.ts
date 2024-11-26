@@ -379,6 +379,56 @@ export const isComputeUserStatsResponse = (
   });
 };
 
+// usage
+
+export type UsageRequest = {
+  type: "usageRequest";
+  zoneName?: string;
+  userId?: string;
+};
+
+export const isUsageRequest = (x: any): x is UsageRequest => {
+  return validateObject(x, {
+    type: isEqualTo("usageRequest"),
+    zoneName: optional(isString),
+    userId: optional(isString),
+  });
+};
+
+export type UserZoneDayUsage = {
+  day: string; // yyyy-mm-dd
+  zoneName: string;
+  userId: string;
+  numDownloads: number;
+  numUploads: number;
+  numBytesDownloaded: number;
+  numBytesUploaded: number;
+};
+
+export const isUserZoneDayUsage = (x: any): x is UserZoneDayUsage => {
+  return validateObject(x, {
+    day: isString,
+    zoneName: isString,
+    userId: isString,
+    numDownloads: isNumber,
+    numUploads: isNumber,
+    numBytesDownloaded: isNumber,
+    numBytesUploaded: isNumber,
+  });
+};
+
+export type UsageResponse = {
+  type: "usageResponse";
+  userZoneDayUsages: UserZoneDayUsage[];
+};
+
+export const isUsageResponse = (x: any): x is UsageResponse => {
+  return validateObject(x, {
+    type: isEqualTo("usageResponse"),
+    userZoneDayUsages: isArrayOf(isUserZoneDayUsage),
+  });
+};
+
 // initiateFileUpload
 
 export type InitiateFileUploadRequest = {

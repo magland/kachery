@@ -3,6 +3,8 @@ import requests
 from ._sha1_of_string import _sha1_of_string
 
 
+kachery_base_url = os.environ.get("KACHERY_BASE_URL", "https://kachery.vercel.app")
+
 def _initiate_file_upload_request(
     *, size: int, hash_alg: str, hash: str, zone: str
 ) -> dict:
@@ -19,7 +21,7 @@ def _initiate_file_upload_request(
         "zoneName": zone,
         "workToken": work_token,
     }
-    url = "https://kachery.vercel.app/api/initiateFileUpload"
+    url = f"{kachery_base_url}/api/initiateFileUpload"
     headers = {"Content-Type": "application/json"}
     if KACHERY_API_KEY:
         headers["Authorization"] = f"Bearer {KACHERY_API_KEY}"  # type: ignore
@@ -46,7 +48,7 @@ def _finalize_file_upload_request(
         "zoneName": kachery_zone,
         "size": size,
     }
-    url = "https://kachery.vercel.app/api/finalizeFileUpload"
+    url = f"{kachery_base_url}/api/finalizeFileUpload"
     headers = {"Content-Type": "application/json"}
     if KACHERY_API_KEY:
         headers["Authorization"] = f"Bearer {KACHERY_API_KEY}"  # type: ignore
@@ -67,7 +69,7 @@ def find_file_request(*, hash_alg: str, hash: str, zone: str) -> dict:
         "hash": hash,
         "zoneName": zone,
     }
-    url = "https://kachery.vercel.app/api/findFile"
+    url = f"{kachery_base_url}/api/findFile"
     headers = {
         "Content-Type": "application/json",
     }

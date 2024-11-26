@@ -35,8 +35,19 @@ import {
   FindFileResponse,
   isGetUserRequest,
   GetUserResponse,
+  isUsageRequest,
+  UserZoneDayUsage,
+  UsageResponse,
 } from "./types"; // remove .js for local dev
-import { initiateUpload, finalizeUpload, findFile } from "./core"; // remove .js for local dev
+import {
+  initiateUpload,
+  finalizeUpload,
+  findFile,
+  fetchDownloadRecords,
+  fetchUploadRecords,
+  DownloadRecord,
+  UploadRecord,
+} from "./core"; // remove .js for local dev
 
 const dbName = "kachery";
 
@@ -74,8 +85,8 @@ export const addZoneHandler = allowCors(
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
-      if (userId !== "github|magland") {
-        // only magland can add zones for now
+      if (!isAdminUser(userId)) {
+        // only admin can add zones for now
         res.status(401).json({ error: "Only admin can add zones" });
         return;
       }
@@ -466,7 +477,7 @@ export const getUserHandler = allowCors(
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
-      if (authUserId !== rr.userId && authUserId !== "github|magland") {
+      if (authUserId !== rr.userId && !isAdminUser(authUserId)) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
@@ -506,7 +517,7 @@ export const getUsersHandler = allowCors(
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
-      if (authUserId !== "github|magland") {
+      if (!isAdminUser(authUserId)) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
@@ -1158,6 +1169,108 @@ export const computeUserStatsHandler = allowCors(
   },
 );
 
+// usageHandler
+export const usageHandler = allowCors(
+  async (req: VercelRequest, res: VercelResponse) => {
+    const rr = req.body;
+    if (!isUsageRequest(rr)) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+    try {
+      const gitHubAccessToken = req.headers.authorization?.split(" ")[1]; // Extract the token
+      if (!gitHubAccessToken) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const userIdFromToken =
+        await getUserIdForGitHubAccessToken(gitHubAccessToken);
+      if (!userIdFromToken) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const { userId, zoneName } = rr;
+      if (userId) {
+        if (userId !== userIdFromToken && !isAdminUser(userIdFromToken)) {
+          res.status(401).json({ error: "Unauthorized" });
+          return;
+        }
+      } else {
+        if (!isAdminUser(userIdFromToken)) {
+          res.status(401).json({ error: "Unauthorized" });
+          return;
+        }
+      }
+      const downloadDocs: DownloadRecord[] = await fetchDownloadRecords({
+        userId,
+        zoneName,
+      });
+      const uploadDocs: UploadRecord[] = await fetchUploadRecords({
+        userId,
+        zoneName,
+        stage: "initiate",
+      });
+      const userZoneDayUsages: UserZoneDayUsage[] = [];
+      const lookup: { [key: string]: UserZoneDayUsage } = {};
+      const dayFromTimestamp = (timestamp: number) => {
+        const d = new Date(timestamp);
+        // yyyy-mm-dd
+        return `${d.getFullYear()}-${(d.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+      };
+      for (const doc of downloadDocs) {
+        const day = dayFromTimestamp(doc.timestamp);
+        const key = `${doc.userId}:${doc.zoneName}:${day}`;
+        if (lookup[key]) {
+          lookup[key].numDownloads++;
+          lookup[key].numBytesDownloaded += doc.size;
+        } else {
+          lookup[key] = {
+            userId: doc.userId,
+            zoneName: doc.zoneName,
+            day,
+            numDownloads: 1,
+            numBytesDownloaded: doc.size,
+            numUploads: 0,
+            numBytesUploaded: 0,
+          };
+          userZoneDayUsages.push(lookup[key]);
+        }
+      }
+      console.log("--- upload docs length", uploadDocs.length);
+      for (const doc of uploadDocs) {
+        const day = dayFromTimestamp(doc.timestamp);
+        const key = `${doc.userId}:${doc.zoneName}:${day}`;
+        console.log("--- doc", doc);
+        if (lookup[key]) {
+          lookup[key].numUploads++;
+          lookup[key].numBytesUploaded += doc.size;
+        } else {
+          lookup[key] = {
+            userId: doc.userId,
+            zoneName: doc.zoneName,
+            day,
+            numDownloads: 0,
+            numBytesDownloaded: 0,
+            numUploads: 1,
+            numBytesUploaded: doc.size,
+          };
+          userZoneDayUsages.push(lookup[key]);
+        }
+      }
+      const resp: UsageResponse = {
+        type: "usageResponse",
+        userZoneDayUsages,
+      };
+      res.status(200).json(resp);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
+  },
+);
+
 // Thanks: https://stackoverflow.com/questions/16167581/sort-object-properties-and-json-stringify
 export const JSONStringifyDeterministic = (
   obj: any,
@@ -1193,4 +1306,9 @@ const sha1Bits = (input: string) => {
   const bits = BigInt("0x" + hash).toString(2);
   const expectedLength = hash.length * 4;
   return bits.padStart(expectedLength, "0");
+};
+
+const isAdminUser = (userId: string) => {
+  // hard-coded for now
+  return ["github|magland"].includes(userId);
 };

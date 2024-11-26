@@ -13,7 +13,9 @@ import {
   KacheryZoneUser,
   SetUserInfoRequest,
   SetZoneInfoRequest,
+  UsageRequest,
   UserStats,
+  UserZoneDayUsage,
   isAddZoneResponse,
   isComputeUserStatsResponse,
   isGetUserResponse,
@@ -21,6 +23,7 @@ import {
   isGetZonesResponse,
   isSetUserInfoResponse,
   isSetZoneInfoResponse,
+  isUsageResponse,
 } from "./types";
 
 const isLocalHost = window.location.hostname === "localhost";
@@ -246,6 +249,40 @@ export const useUserStats = (userId: string) => {
   }, [userId]);
   return { userStats };
 };
+
+export const useUsage = (a: { userId?: string; zoneName?: string }) => {
+  const { userId, zoneName } = a;
+  const [userZoneDayUsages, setUserZoneDayUsages] = useState<
+    UserZoneDayUsage[] | undefined
+  >(undefined);
+  const { githubAccessToken } = useLogin();
+  useEffect(() => {
+    let canceled = false;
+    setUserZoneDayUsages(undefined);
+    if (!githubAccessToken) return;
+    (async () => {
+      const req: UsageRequest = {
+        type: "usageRequest",
+        userId,
+        zoneName,
+      };
+      const resp = await apiPostRequest("usage", req, githubAccessToken);
+      if (!resp) return;
+      if (!isUsageResponse(resp)) {
+        console.error("Invalid response", resp);
+        return;
+      }
+      if (canceled) return;
+      setUserZoneDayUsages(resp.userZoneDayUsages);
+    })();
+    return () => {
+      canceled = true;
+    };
+  }, [userId, zoneName, githubAccessToken]);
+  return { userZoneDayUsages };
+};
+
+//
 
 export const apiPostRequest = async (
   path: string,

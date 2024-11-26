@@ -25,6 +25,9 @@ export type Route =
   | {
       page: "user";
       userId: string;
+    }
+  | {
+      page: "usage";
     };
 
 const useRoute = () => {
@@ -74,6 +77,10 @@ const useRoute = () => {
           userId: parts[0],
         };
       }
+    } else if (p === "/usage") {
+      return {
+        page: "usage",
+      };
     } else {
       return {
         page: "home",
@@ -101,6 +108,8 @@ const useRoute = () => {
         } else {
           navigate(`/user/${r.userId}`);
         }
+      } else if (r.page === "usage") {
+        navigate("/usage");
       } else {
         navigate("/");
       }

@@ -6,6 +6,30 @@ import {
 } from "./signedUrls"; // remove .js for local dev
 import { KacheryZone } from "./types"; // remove .js for local dev
 
+export type UploadRecord = {
+  stage: "initiate" | "finalize";
+  timestamp: number;
+  zoneName: string;
+  bucketUri: string;
+  userId: string;
+  size: number;
+  hash: string;
+  hashAlg: string;
+  objectKey: string;
+};
+
+export type DownloadRecord = {
+  timestamp: number;
+  zoneName: string;
+  bucketUri: string;
+  userId: string;
+  size: number;
+  hash: string;
+  hashAlg: string;
+  objectKey: string;
+  downloadUrl: string;
+};
+
 export const initiateUpload = async (a: {
   zone: KacheryZone;
   userId: string;
@@ -52,16 +76,18 @@ export const initiateUpload = async (a: {
     hash: a.hash,
     hashAlg: a.hashAlg,
   });
-  await recordUpload({
+  const uploadRecord: UploadRecord = {
     stage: "initiate",
     timestamp: Date.now(),
-    zone: a.zone,
+    zoneName: a.zone.zoneName,
+    bucketUri: a.zone.bucketUri,
     userId: a.userId,
     size: a.size,
     hash: a.hash,
     hashAlg: a.hashAlg,
     objectKey,
-  });
+  };
+  await addUploadRecord(uploadRecord);
   return {
     alreadyExists: false,
     alreadyPending: false,
@@ -83,16 +109,18 @@ export const finalizeUpload = async (a: {
   if (!a.zone.bucketUri) {
     throw Error(`Bucket URI not set for zone: ${a.zone.zoneName}`);
   }
-  await recordUpload({
+  const uploadRecord: UploadRecord = {
     stage: "finalize",
     timestamp: Date.now(),
-    zone: a.zone,
+    zoneName: a.zone.zoneName,
+    bucketUri: a.zone.bucketUri,
     userId: a.userId,
     size: a.size,
     hash: a.hash,
     hashAlg: a.hashAlg,
     objectKey: a.objectKey,
-  });
+  };
+  await addUploadRecord(uploadRecord);
   return {
     success: true,
   };
@@ -174,16 +202,18 @@ export const findFile = async (a: {
     };
   }
 
-  await recordDownload({
+  const downloadRecord: DownloadRecord = {
     timestamp: Date.now(),
-    zone: a.zone,
+    zoneName: a.zone.zoneName,
+    bucketUri: a.zone.bucketUri,
     userId: a.userId || "",
     size,
     hash: a.hash,
     hashAlg: a.hashAlg,
     objectKey,
     downloadUrl: signedDownloadUrl,
-  });
+  };
+  await addDownloadRecord(downloadRecord);
 
   signedDownloadUrlMemoryCache.set(k, {
     url: signedDownloadUrl,
@@ -208,58 +238,73 @@ const collectionNames = {
   downloadRecords: "downloadRecords",
 };
 
-const recordUpload = async (a: {
-  stage: "initiate" | "finalize";
-  timestamp: number;
-  zone: KacheryZone;
-  userId: string;
-  size: number;
-  hash: string;
-  hashAlg: string;
-  objectKey: string;
-}) => {
+const addUploadRecord = async (record: UploadRecord) => {
   const client = await getMongoClient();
   const collection = client
     .db(dbName)
     .collection(collectionNames.uploadRecords);
-  await collection.insertOne({
-    stage: a.stage,
-    timestamp: a.timestamp,
-    zoneName: a.zone.zoneName,
-    bucketUri: a.zone.bucketUri,
-    userId: a.userId,
-    size: a.size,
-    hash: a.hash,
-    hashAlg: a.hashAlg,
-    objectKey: a.objectKey,
-  });
+  await collection.insertOne(record);
 };
 
-const recordDownload = async (a: {
-  timestamp: number;
-  zone: KacheryZone;
-  userId: string;
-  size: number;
-  hash: string;
-  hashAlg: string;
-  objectKey: string;
-  downloadUrl: string;
-}) => {
+const addDownloadRecord = async (record: DownloadRecord) => {
   const client = await getMongoClient();
   const collection = client
     .db(dbName)
     .collection(collectionNames.downloadRecords);
-  await collection.insertOne({
-    timestamp: a.timestamp,
-    zoneName: a.zone.zoneName,
-    bucketUri: a.zone.bucketUri,
-    userId: a.userId,
-    size: a.size,
-    hash: a.hash,
-    hashAlg: a.hashAlg,
-    objectKey: a.objectKey,
-    downloadUrl: a.downloadUrl,
+  await collection.insertOne(record);
+};
+
+export const fetchUploadRecords = async (a: {
+  zoneName?: string;
+  userId?: string;
+  stage: "initiate" | "finalize";
+}): Promise<UploadRecord[]> => {
+  const client = await getMongoClient();
+  const collection = client
+    .db(dbName)
+    .collection(collectionNames.uploadRecords);
+  const query: any = {
+    stage: a.stage,
+  };
+  if (a.zoneName) {
+    query.zoneName = a.zoneName;
+  }
+  if (a.userId) {
+    query.userId = a.userId;
+  }
+  const docs = await collection.find(query).toArray();
+  docs.forEach((doc) => {
+    removeMongoId(doc);
   });
+  return docs as any as UploadRecord[];
+};
+
+export const fetchDownloadRecords = async (a: {
+  zoneName?: string;
+  userId?: string;
+}): Promise<DownloadRecord[]> => {
+  const client = await getMongoClient();
+  const collection = client
+    .db(dbName)
+    .collection(collectionNames.downloadRecords);
+  const query: any = {};
+  if (a.zoneName) {
+    query.zoneName = a.zoneName;
+  }
+  if (a.userId) {
+    query.userId = a.userId;
+  }
+  const docs = await collection.find(query).toArray();
+  docs.forEach((doc) => {
+    removeMongoId(doc);
+  });
+  return docs as any as DownloadRecord[];
+};
+
+const removeMongoId = (x: any) => {
+  if (x === null) return;
+  if (typeof x !== "object") return;
+  if ("_id" in x) delete x["_id"];
 };
 
 const findRecordedDownload = async (a: {

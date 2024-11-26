@@ -10,6 +10,7 @@ import UserPage from "./pages/UserPage/UserPage";
 import ZonePage from "./pages/ZonePage/ZonePage";
 import ZonesPage from "./pages/ZonesPage/ZonesPage";
 import useRoute from "./useRoute";
+import UsagePage from "./pages/UsagePage/UsagePage";
 // import useRoute from './useRoute'
 
 function App() {
@@ -39,6 +40,8 @@ function MainWindow() {
     return <SettingsPage />;
   } else if (route.page === "user") {
     return <UserPage />;
+  } else if (route.page === "usage") {
+    return <UsagePage width={width} height={height} />;
   } else {
     return <div>Invalid route</div>;
   }
