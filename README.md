@@ -37,7 +37,7 @@ From the command line:
 echo "test-content" > test_content.txt
 kachery-store test_content.txt
 # Output:
-# sha1://b971c6ef19b1d70ae8f0feb989b106c319b36230?label=test_content.txt
+# kachery:scratch:sha1:b971c6ef19b1d70ae8f0feb989b106c319b36230:test_content.txt
 ```
 
 From Python:
@@ -65,12 +65,12 @@ uri4 = ka.store_npy(array, label='example.npy')
 From the command line:
 
 ```bash
-kachery-load sha1://b971c6ef19b1d70ae8f0feb989b106c319b36230?label=test_content.txt
+kachery-load kachery:scratch:sha1:b971c6ef19b1d70ae8f0feb989b106c319b36230:test_content.txt
 # Output:
 # /home/<user>/.kachery/sha1/b9/71/c6/b971c6ef19b1d70ae8f0feb989b106c319b36230
 
 # Output file contents to stdout
-kachery-cat sha1://b971c6ef19b1d70ae8f0feb989b106c319b36230?label=test_content.txt
+kachery-cat kachery:scratch:sha1:b971c6ef19b1d70ae8f0feb989b106c319b36230:test_content.txt
 # Output:
 # test-content
 ```
@@ -81,16 +81,16 @@ From Python:
 import kachery as ka
 
 # Load a file
-local_fname = ka.load_file('sha1://b971c6ef19b1d70ae8f0feb989b106c319b36230?label=test_content.txt')
+local_fname = ka.load_file('kachery:scratch:sha1:b971c6ef19b1d70ae8f0feb989b106c319b36230:test_content.txt')
 
 # Load text
-text = ka.load_text('sha1://d9e989f651cdd269d7f9bb8a215d024d8d283688?label=example.txt')
+text = ka.load_text('kachery:default:sha1:d9e989f651cdd269d7f9bb8a215d024d8d283688:example.txt')
 
 # Load a JSON object
-x = ka.load_json('sha1://d0d9555e376ff13a08c6d56072808e27ca32d54a?label=example.json')
+x = ka.load_json('kachery:default:sha1:d0d9555e376ff13a08c6d56072808e27ca32d54a:example.json')
 
 # Load a NumPy array
-y = ka.load_npy("sha1://bb55205a2482c6db2ace544fc7d8397551110701?label=example.npy")
+y = ka.load_npy("kachery:default:sha1:bb55205a2482c6db2ace544fc7d8397551110701:example.npy")
 ```
 
 ## Zones and Storage

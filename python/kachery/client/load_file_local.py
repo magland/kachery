@@ -8,10 +8,19 @@ from ._compute_file_hash import _compute_file_hash
 
 def load_file_local(uri: str, *, dest: Union[None, str] = None) -> Union[str, None]:
     query = _get_query_from_uri(uri)
-    assert uri.startswith("sha1://"), f"Invalid local URI: {uri}"
-    a = uri.split("?")[0].split("/")
-    assert len(a) >= 3, f"Invalid or unsupported URI: {uri}"
-    sha1 = a[2]
+    if uri.startswith("sha1://"):
+        a = uri.split("?")[0].split("/")
+        assert len(a) >= 3, f"Invalid or unsupported URI: {uri}"
+        sha1 = a[2]
+    elif uri.startswith("kachery:"):
+        parts = uri.split(":")
+        if len(parts) < 4:
+            raise Exception(f"Invalid kachery URI: {uri}")
+        alg = parts[2]
+        assert alg == "sha1", f"Unsupported algorithm: {alg}"
+        sha1 = parts[3]
+    else:
+        raise Exception(f"Unsupported URI for loading local file: {uri}")
 
     kachery_dir = get_kachery_dir()
 

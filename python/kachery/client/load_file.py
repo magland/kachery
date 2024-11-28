@@ -13,23 +13,24 @@ def load_file(
     dest: Optional[str] = None,
     local_only: bool = False,
     _get_info: bool = False,
-    verbose: bool = False
+    verbose: bool = False,
+    zone: Optional[str] = None,
 ) -> Optional[str]:
     if uri.startswith("gh://"):
         if _get_info:
             raise Exception("Cannot use _get_info for this uri")
         return _load_github_file(uri)
 
-    if uri.startswith("http://") or uri.startswith("https://"):
+    elif uri.startswith("http://") or uri.startswith("https://"):
         if _get_info:
             raise Exception("Cannot use _get_info for this uri")
         return _load_http_file(uri)
 
-    if local_only:
+    elif local_only:
         if _get_info:
             raise Exception("Cannot use _get_info with local_only")
         return load_file_local(uri, dest=dest)
-    if uri.startswith("/"):
+    elif uri.startswith("/"):
         if _get_info:
             raise Exception("Cannot use _get_info for this uri")
         if os.path.exists(uri):
@@ -39,14 +40,14 @@ def load_file(
             return uri
         else:
             return None
-    if uri.startswith("sha1://"):
+    elif uri.startswith("sha1://"):
         if not _get_info:
             x = load_file_local(uri, dest=dest)
             if x is not None:
                 return x
         sha1 = uri.split("?")[0].split("/")[2]
         fname_or_info = _load_sha1_file_from_cloud(
-            sha1, verbose=verbose, dest=dest, _get_info=_get_info
+            sha1, verbose=verbose, dest=dest, _get_info=_get_info, zone=zone
         )
         if fname_or_info is None:
             return None
@@ -60,6 +61,25 @@ def load_file(
             return fname_or_info
         else:
             raise Exception("Unexpected return value from _load_sha1_file_from_cloud")
+    elif uri.startswith("kachery:"):
+        parts = uri.split(":")
+        if len(parts) < 4:
+            raise Exception(f"Unexpected uri: {uri}")
+        zone = parts[1]
+        alg = parts[2]
+        hash0 = parts[3]
+        # label = parts[4] if len(parts) > 4 else None
+        uri2 = f"{alg}://{hash0}"
+        return load_file(
+            uri2,
+            dest=dest,
+            local_only=local_only,
+            _get_info=_get_info,
+            verbose=verbose,
+            zone=zone,
+        )
+    else:
+        raise Exception(f"Unexpected uri: {uri}")
 
 
 def load_file_info(uri: str) -> dict:

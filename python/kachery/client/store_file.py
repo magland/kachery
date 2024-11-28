@@ -2,7 +2,6 @@ import os
 import shutil
 import requests
 from typing import Union
-from urllib.parse import quote
 import time
 
 from .get_kachery_dir import get_kachery_dir
@@ -13,6 +12,7 @@ from ._custom_storage_backend import get_custom_storage_backend
 
 from ._api_requests import _initiate_file_upload_request, _finalize_file_upload_request
 from ._fs_operations import _makedirs
+from ._form_uri import _form_uri
 
 
 def store_file(
@@ -21,15 +21,17 @@ def store_file(
     label: Union[str, None] = None,
     cache_locally: bool = False,
     local: bool = False,
+    uri_type: int = 2,  # 1 or 2
 ):
     if local:
-        return store_file_local(filename, label=label)
+        return store_file_local(filename, label=label, uri_type=uri_type)
     if os.environ.get("KACHERY_STORE_FILE_DIR") is not None:
         return store_file_local(
             filename,
             label=label,
             store_file_dir=os.environ["KACHERY_STORE_FILE_DIR"],
             store_file_prefix=os.getenv("KACHERY_STORE_FILE_PREFIX", None),
+            uri_type=uri_type,
         )
 
     _custom_storage_backend = get_custom_storage_backend()
@@ -40,8 +42,10 @@ def store_file(
         size = os.path.getsize(filename)
         alg = "sha1"
         hash0 = _compute_file_hash(filename, algorithm=alg)
-        uri = f"{alg}://{hash0}"
         kachery_zone = os.environ.get("KACHERY_ZONE", "default")
+        uri = _form_uri(
+            alg=alg, hash0=hash0, label=label, uri_type=uri_type, zone=kachery_zone
+        )
         timer = time.time()
         response = None
         while True:
@@ -74,8 +78,6 @@ For more information, visit https://github.com/magland/kachery.
             already_exists = response.get("alreadyExists", False)
             already_pending = response.get("alreadyPending", False)
             if already_exists:
-                if label is not None:
-                    uri = f"{uri}?label={quote(label)}"
                 return uri
             elif already_pending:
                 elapsed = time.time() - timer
@@ -107,12 +109,6 @@ For more information, visit https://github.com/magland/kachery.
 
         if not response2.get("success", False):
             raise Exception(f"Error finalizing file upload: {uri}")
-
-        if label is not None:
-            uri = f"{uri}?label={quote(label)}"
-
-        if label is not None:
-            uri = f"{uri}?label={quote(label)}"
     else:
         # custom storage backend
         assert _custom_storage_backend is not None

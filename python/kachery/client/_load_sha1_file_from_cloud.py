@@ -9,14 +9,21 @@ from ._fs_operations import _makedirs
 
 
 def _load_sha1_file_from_cloud(
-    sha1: str, *, verbose: bool, dest: Union[None, str] = None, _get_info: bool = False
+    sha1: str,
+    *,
+    verbose: bool,
+    dest: Union[None, str] = None,
+    _get_info: bool = False,
+    zone: Union[str, None] = None,
 ) -> Union[str, dict, None]:
-    kachery_zone = os.environ.get("KACHERY_ZONE", "default")
+    if zone:
+        kachery_zone = zone
+    else:
+        kachery_zone = os.environ.get("KACHERY_ZONE", "default")
 
     response = find_file_request(hash_alg="sha1", hash=sha1, zone=kachery_zone)
 
     found = response["found"]
-    uri = f"sha1://{sha1}"
     if found:
         url = response["url"]
     else:
@@ -32,7 +39,7 @@ def _load_sha1_file_from_cloud(
     parent_dir = f"{kachery_dir}/sha1/{e[0]}{e[1]}/{e[2]}{e[3]}/{e[4]}{e[5]}"
     filename = f"{parent_dir}/{sha1}"
     if verbose:
-        print(f"Loading file from kachery: {uri}")
+        print(f"Loading file from kachery: {sha1}")
     if not os.path.exists(parent_dir):
         _makedirs(parent_dir)
     tmp_filename = f"{filename}.tmp.{_random_string(8)}"

@@ -1,6 +1,6 @@
 import kachery as k2
 
-uri = k2.store_json({'test': 25})
+uri = k2.store_json({"test": 25})
 print(uri)
 
 info = k2.load_file_info(uri)

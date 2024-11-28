@@ -5,6 +5,7 @@ from ._sha1_of_string import _sha1_of_string
 
 kachery_base_url = os.environ.get("KACHERY_BASE_URL", "https://kachery.vercel.app")
 
+
 def _initiate_file_upload_request(
     *, size: int, hash_alg: str, hash: str, zone: str
 ) -> dict:
