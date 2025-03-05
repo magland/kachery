@@ -431,7 +431,7 @@ export const setUserInfoHandler = allowCors(
         update["name"] = rr.name;
       }
       if (rr.email !== undefined) {
-        if (!isValidEmail(rr.email)) {
+        if (isValidEmail(rr.email)) {
           update["email"] = rr.email;
         }
       }
