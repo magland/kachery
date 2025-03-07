@@ -1,5 +1,4 @@
 import { useContext, useEffect } from 'react';
-import { KacheryUser } from '../../../apiHelpers/types';
 import { LoginContext } from '../../LoginContext/LoginContext';
 import useRoute from '../../useRoute';
 import { useUsers } from '../../hooks';

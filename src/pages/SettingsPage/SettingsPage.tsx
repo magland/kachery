@@ -130,11 +130,16 @@ const SettingsPage: FunctionComponent<SettingsPageProps> = () => {
           </p>
         </div>
       )}
-      {userId && !resettingApiKey && (
+      {userId && user && !resettingApiKey && (
         <button onClick={handleResetApiKey}>
           Generate API key for{" "}
           <UserIdComponent userId={userId} followLink={false} />
         </button>
+      )}
+      {userId && !user && (
+        <div>
+          Please refresh the page to see your user information.
+        </div>
       )}
       {resettingApiKey && <p>Generating API key...</p>}
       {generatedApiKey && !resettingApiKey && (

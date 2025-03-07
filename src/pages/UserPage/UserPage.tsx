@@ -2,7 +2,7 @@ import { FunctionComponent } from "react";
 import useRoute from "../../useRoute";
 import UserIdComponent from "../../components/UserIdComponent";
 import { Hyperlink } from "@fi-sci/misc";
-import { useUserStats, useUsage } from "../../hooks";
+import { useUsage } from "../../hooks";
 
 type UserPageProps = {
   // none
