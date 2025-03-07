@@ -163,16 +163,20 @@ export const useZone = (zoneName: string) => {
     () =>
       async (o: {
         users?: KacheryZoneUser[];
+        publicDownload?: boolean;
+        publicUpload?: boolean;
         bucketUri?: string;
         directory?: string;
         credentials?: string;
       }) => {
-        const { users, bucketUri, directory, credentials } = o;
+        const { users, publicDownload, publicUpload, bucketUri, directory, credentials } = o;
         if (!githubAccessToken) return;
         const req: SetZoneInfoRequest = {
           type: "setZoneInfoRequest",
           zoneName,
           users,
+          publicDownload,
+          publicUpload,
           bucketUri,
           directory,
           credentials,
