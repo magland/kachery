@@ -42,7 +42,6 @@ const SettingsPage: FunctionComponent<SettingsPageProps> = () => {
     }
   }, [userId, githubAccessToken]);
   const { user, setUserInfo } = useUser(userId || "");
-  console.log("--- user", user);
   return (
     <div style={{ padding: 30 }}>
       <h3>Settings</h3>

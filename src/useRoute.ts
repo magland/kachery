@@ -28,6 +28,9 @@ export type Route =
     }
   | {
       page: "usage";
+    }
+  | {
+      page: "users";
     };
 
 const useRoute = () => {
@@ -81,6 +84,10 @@ const useRoute = () => {
       return {
         page: "usage",
       };
+    } else if (p === "/users") {
+      return {
+        page: "users",
+      };
     } else {
       return {
         page: "home",
@@ -110,6 +117,8 @@ const useRoute = () => {
         }
       } else if (r.page === "usage") {
         navigate("/usage");
+      } else if (r.page === "users") {
+        navigate("/users");
       } else {
         navigate("/");
       }

@@ -3,8 +3,8 @@ import {
   getSignedDownloadUrl,
   getSignedUploadUrl,
   objectExists,
-} from "./s3Helpers"; // remove .js for local dev
-import { KacheryZone } from "./types"; // remove .js for local dev
+} from "./s3Helpers.js"; // remove .js for local dev
+import { KacheryZone } from "./types.js"; // remove .js for local dev
 
 export const createSignedDownloadUrl = async (a: {
   zone: KacheryZone;

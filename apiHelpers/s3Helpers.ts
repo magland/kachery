@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { PutObjectRequest } from "aws-sdk/clients/s3";
-import getS3Client from "./getS3Client"; // remove .js for local dev
+import getS3Client from "./getS3Client.js"; // remove .js for local dev
 
 export type Bucket = {
   uri: string; // e.g., wasabi://kachery-cloud?region=us-east-1

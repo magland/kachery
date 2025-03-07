@@ -6,6 +6,7 @@ import {
   ComputeUserStatsRequest,
   DeleteZoneRequest,
   GetUserRequest,
+  GetUsersRequest,
   GetZoneRequest,
   GetZonesRequest,
   KacheryUser,
@@ -19,6 +20,7 @@ import {
   isAddZoneResponse,
   isComputeUserStatsResponse,
   isGetUserResponse,
+  isGetUsersResponse,
   isGetZoneResponse,
   isGetZonesResponse,
   isSetUserInfoResponse,
@@ -30,6 +32,34 @@ const isLocalHost = window.location.hostname === "localhost";
 const apiUrl = isLocalHost
   ? `http://${window.location.hostname}:${window.location.port}`
   : "https://kachery.vercel.app";
+
+export const useUsers = () => {
+  const [users, setUsers] = useState<KacheryUser[] | undefined>(undefined);
+  const { githubAccessToken } = useLogin();
+
+  useEffect(() => {
+    let canceled = false;
+    setUsers(undefined);
+    if (!githubAccessToken) return;
+    (async () => {
+      const req: GetUsersRequest = {
+        type: "getUsersRequest"
+      };
+      const resp = await apiPostRequest("getUsers", req, githubAccessToken);
+      if (canceled) return;
+      if (!isGetUsersResponse(resp)) {
+        console.error("Invalid response", resp);
+        return;
+      }
+      setUsers(resp.users);
+    })();
+    return () => {
+      canceled = true;
+    };
+  }, [githubAccessToken]);
+
+  return { users };
+};
 
 export const useZones = () => {
   const { userId, githubAccessToken } = useLogin();
@@ -281,8 +311,6 @@ export const useUsage = (a: { userId?: string; zoneName?: string }) => {
   }, [userId, zoneName, githubAccessToken]);
   return { userZoneDayUsages };
 };
-
-//
 
 export const apiPostRequest = async (
   path: string,

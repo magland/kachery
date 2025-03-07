@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
-import allowCors from "./allowCors"; // remove .js for local dev
-import { getMongoClient } from "./getMongoClient"; // remove .js for local dev
+import allowCors from "./allowCors.js"; // remove .js for local dev
+import { getMongoClient } from "./getMongoClient.js"; // remove .js for local dev
 import {
   AddZoneResponse,
   AddUserResponse,
@@ -38,7 +38,7 @@ import {
   isUsageRequest,
   UserZoneDayUsage,
   UsageResponse,
-} from "./types"; // remove .js for local dev
+} from "./types.js"; // remove .js for local dev
 import {
   initiateUpload,
   finalizeUpload,
@@ -47,7 +47,7 @@ import {
   fetchUploadRecords,
   DownloadRecord,
   UploadRecord,
-} from "./core"; // remove .js for local dev
+} from "./core.js"; // remove .js for local dev
 
 const dbName = "kachery";
 
@@ -110,7 +110,7 @@ export const addZoneHandler = allowCors(
         type: "addZoneResponse",
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -147,7 +147,7 @@ export const getZoneHandler = allowCors(
         zone,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -180,7 +180,7 @@ export const getZonesHandler = allowCors(
         zones,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -223,7 +223,7 @@ export const deleteZoneHandler = allowCors(
         type: "deleteZoneResponse",
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -299,7 +299,7 @@ export const setZoneInfoHandler = allowCors(
         type: "setZoneInfoResponse",
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -347,7 +347,7 @@ export const addUserHandler = allowCors(
         type: "addUserResponse",
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -395,7 +395,7 @@ export const resetUserApiKeyHandler = allowCors(
         apiKey,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -447,7 +447,7 @@ export const setUserInfoHandler = allowCors(
         type: "setUserInfoResponse",
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -492,7 +492,7 @@ export const getUserHandler = allowCors(
         user,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -531,8 +531,8 @@ export const getUsersHandler = allowCors(
         }
         user.apiKey = user.apiKey ? "********" : "";
       }
-      res.status(200).json({ users });
-    } catch (e) {
+      res.status(200).json({ type: "getUsersResponse", users });
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -622,7 +622,7 @@ export const initiateFileUploadHandler = allowCors(
         objectKey,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -687,7 +687,7 @@ export const finalizeFileUploadHandler = allowCors(
         success,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -757,7 +757,7 @@ export const findFileHandler = allowCors(
         cacheHit,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -1162,7 +1162,7 @@ export const computeUserStatsHandler = allowCors(
         userStats,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
@@ -1238,11 +1238,9 @@ export const usageHandler = allowCors(
           userZoneDayUsages.push(lookup[key]);
         }
       }
-      console.log("--- upload docs length", uploadDocs.length);
       for (const doc of uploadDocs) {
         const day = dayFromTimestamp(doc.timestamp);
         const key = `${doc.userId}:${doc.zoneName}:${day}`;
-        console.log("--- doc", doc);
         if (lookup[key]) {
           lookup[key].numUploads++;
           lookup[key].numBytesUploaded += doc.size;
@@ -1264,7 +1262,7 @@ export const usageHandler = allowCors(
         userZoneDayUsages,
       };
       res.status(200).json(resp);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
     }
