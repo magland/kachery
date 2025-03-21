@@ -481,10 +481,17 @@ export const getUserHandler = allowCors(
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
-      const user = await fetchUser(rr.userId, { checkCache: false });
+      let user = await fetchUser(rr.userId, { checkCache: false });
       if (!user) {
-        res.status(404).json({ error: `User not found: ${rr.userId}` });
-        return;
+        // in this case we add the user
+        user = {
+          userId: rr.userId,
+          name: "",
+          email: "",
+          researchDescription: "",
+          apiKey: null,
+        };
+        await insertUser(user);
       }
       user.apiKey = user.apiKey ? "********" : "";
       const resp: GetUserResponse = {
