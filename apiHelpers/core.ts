@@ -1,10 +1,10 @@
-import { getMongoClient } from "./getMongoClient"; // remove .js for local dev
+import { getMongoClient } from "./getMongoClient.js"; // remove .js for local dev
 import {
   createSignedUploadUrl,
   createSignedDownloadUrl,
   checkFileExists,
-} from "./signedUrls"; // remove .js for local dev
-import { KacheryZone } from "./types"; // remove .js for local dev
+} from "./signedUrls.js"; // remove .js for local dev
+import { KacheryZone } from "./types.js"; // remove .js for local dev
 
 export type UploadRecord = {
   stage: "initiate" | "finalize";

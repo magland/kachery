@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import AWS from "aws-sdk";
-import { Bucket, parseBucketUri } from "./s3Helpers"; // remove .js for local dev
+import { Bucket, parseBucketUri } from "./s3Helpers.js"; // remove .js for local dev
 
 // interface PutObjectRequestParamsX {
 //     Bucket: any

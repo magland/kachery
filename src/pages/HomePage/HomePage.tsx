@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Hyperlink } from "@fi-sci/misc";
-import { FunctionComponent, useEffect, useState } from "react";
+import { FunctionComponent, useContext, useEffect, useState } from "react";
 import LoginButton from "../../LoginButton";
+import { LoginContext } from "../../LoginContext/LoginContext";
 import useRoute from "../../useRoute";
 // import { getGitHubAccessToken } from "./App";
 
@@ -12,6 +13,8 @@ type Props = {
 const HomePage: FunctionComponent<Props> = () => {
   const { setRoute } = useRoute();
   const { recentZones } = useRecentZones();
+  const loginContext = useContext(LoginContext);
+  const isAdmin = loginContext?.userId === 'github|magland';
   return (
     <div style={{ padding: 30 }}>
       <h3>Kachery</h3>
@@ -66,6 +69,17 @@ const HomePage: FunctionComponent<Props> = () => {
           Settings
         </Hyperlink>
       </div>
+      {isAdmin && (
+        <div>
+          <Hyperlink
+            onClick={() => {
+              setRoute({ page: "users" });
+            }}
+          >
+            Users
+          </Hyperlink>
+        </div>
+      )}
     </div>
   );
 };

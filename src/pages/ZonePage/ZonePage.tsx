@@ -105,6 +105,38 @@ const ZonePage: FunctionComponent<ZonePageProps> = ({ width, height }) => {
               <td />
             </tr>
             <tr>
+              <td>Public Download</td>
+              <td>
+                {zone.publicDownload ? "Yes" : "No"}
+              </td>
+              <td>
+                <Hyperlink
+                  onClick={() => {
+                    if (!window.confirm(`Set public download to ${!zone.publicDownload}?`)) return;
+                    setZoneInfo({ publicDownload: !zone.publicDownload });
+                  }}
+                >
+                  Toggle
+                </Hyperlink>
+              </td>
+            </tr>
+            <tr>
+              <td>Public Upload</td>
+              <td>
+                {zone.publicUpload ? "Yes" : "No"}
+              </td>
+              <td>
+                <Hyperlink
+                  onClick={() => {
+                    if (!window.confirm(`Set public upload to ${!zone.publicUpload}?`)) return;
+                    setZoneInfo({ publicUpload: !zone.publicUpload });
+                  }}
+                >
+                  Toggle
+                </Hyperlink>
+              </td>
+            </tr>
+            <tr>
               <td>Users</td>
               <td>
                 {zone.users.map((user, index) => (

@@ -1,3 +1,3 @@
-import { findFileHandler } from "../apiHelpers/requestHandlers"; // remove .js for local dev
+import { findFileHandler } from "../apiHelpers/requestHandlers.js"; // remove .js for local dev
 
 export default findFileHandler;
