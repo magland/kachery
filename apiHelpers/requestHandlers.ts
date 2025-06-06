@@ -3,6 +3,7 @@ import { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
 import allowCors from "./allowCors.js"; // remove .js for local dev
 import { getMongoClient } from "./getMongoClient.js"; // remove .js for local dev
+import { withLogging } from "./withLogging.js"; // remove .js for local dev
 import {
   AddZoneResponse,
   AddUserResponse,
@@ -58,7 +59,7 @@ const collectionNames = {
 
 // addZone handler
 export const addZoneHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -114,12 +115,12 @@ export const addZoneHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // getZone handler
 export const getZoneHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -151,12 +152,12 @@ export const getZoneHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // getZones handler
 export const getZonesHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -184,12 +185,12 @@ export const getZonesHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // deleteZone handler
 export const deleteZoneHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
     if (!isDeleteZoneRequest(rr)) {
       res.status(400).json({ error: "Invalid request" });
@@ -227,12 +228,12 @@ export const deleteZoneHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // setZoneInfo handler
 export const setZoneInfoHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
     if (!isSetZoneInfoRequest(rr)) {
       res.status(400).json({ error: "Invalid request" });
@@ -303,12 +304,12 @@ export const setZoneInfoHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // addUser handler
 export const addUserHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -351,12 +352,12 @@ export const addUserHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // resetUserApiKey handler
 export const resetUserApiKeyHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -399,12 +400,12 @@ export const resetUserApiKeyHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // setUserInfo handler
 export const setUserInfoHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -451,12 +452,12 @@ export const setUserInfoHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // getUser handler
 export const getUserHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -503,12 +504,12 @@ export const getUserHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // getUsers handler
 export const getUsersHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
       return;
@@ -543,12 +544,12 @@ export const getUsersHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // initiateFileUpload handler
 export const initiateFileUploadHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
     if (!isInitiateFileUploadRequest(rr)) {
       res.status(400).json({ error: "Invalid request" });
@@ -633,12 +634,12 @@ export const initiateFileUploadHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // finalizeFileUpload handler
 export const finalizeFileUploadHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
     if (!isFinalizeFileUploadRequest(rr)) {
       res.status(400).json({ error: "Invalid request" });
@@ -698,12 +699,12 @@ export const finalizeFileUploadHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // findFile handler
 export const findFileHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
     if (!isFindFileRequest(rr)) {
       res.status(400).json({ error: "Invalid request" });
@@ -768,7 +769,7 @@ export const findFileHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 ////////////////////////////////////////
@@ -1153,7 +1154,7 @@ const userIsAdminForZone = (zone: KacheryZone, userId: string) => {
 
 // computeUserStats handler
 export const computeUserStatsHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
     if (!isComputeUserStatsRequest(rr)) {
       res.status(400).json({ error: "Invalid request" });
@@ -1173,12 +1174,12 @@ export const computeUserStatsHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // usageHandler
 export const usageHandler = allowCors(
-  async (req: VercelRequest, res: VercelResponse) => {
+  withLogging(async (req: VercelRequest, res: VercelResponse) => {
     const rr = req.body;
     if (!isUsageRequest(rr)) {
       res.status(400).json({ error: "Invalid request" });
@@ -1273,7 +1274,7 @@ export const usageHandler = allowCors(
       console.error(e);
       res.status(500).json({ error: e.message });
     }
-  },
+  })
 );
 
 // Thanks: https://stackoverflow.com/questions/16167581/sort-object-properties-and-json-stringify
