@@ -22,14 +22,20 @@ def _initiate_file_upload_request(
         "zoneName": zone,
         "workToken": work_token,
     }
+    if zone in ["default", "scratch"] and os.environ.get("KACHERY_ALLOW_PUBLIC_ZONES") == "1":
+        payload["allowPublicZones"] = True
     url = f"{kachery_base_url}/api/initiateFileUpload"
     headers = {"Content-Type": "application/json"}
     if KACHERY_API_KEY:
         headers["Authorization"] = f"Bearer {KACHERY_API_KEY}"  # type: ignore
     resp = requests.post(url, json=payload, headers=headers)
     if resp.status_code != 200:
+        try:
+            error_message = resp.json()["error"]
+        except Exception:
+            error_message = resp.text
         raise Exception(
-            f'Error in {payload["type"]} ({resp.status_code}) {resp.reason}: {resp.text}'
+            f'Error in {payload["type"]} ({resp.status_code}) {resp.reason}: {error_message}'
         )
     response = resp.json()
     return response

@@ -4,6 +4,8 @@
 
 > **Note**: Kachery is intended for scientific research purposes only.
 
+> **Public zone uploads are being disabled**: Uploads to the public zones ("default" and "scratch") are being disabled. Please either switch to [figpack](https://github.com/flatironinstitute/figpack) or use a custom kachery zone by setting the `KACHERY_ZONE` environment variable. To continue using the public zones for now, upgrade kachery (`pip install --upgrade kachery`) and set `KACHERY_ALLOW_PUBLIC_ZONES=1`. Upload access to the public zones will be shut down entirely in the near future. Files already stored in the public zones will remain available for download.
+
 ## Installation
 
 To install the latest version of `kachery`, run:

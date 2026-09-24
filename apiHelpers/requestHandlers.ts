@@ -546,6 +546,9 @@ export const getUsersHandler = allowCors(
   },
 );
 
+const publicZonesDisabledMessage =
+  'Uploads to the public kachery zones ("default" and "scratch") are being disabled. Please either switch to figpack (https://github.com/flatironinstitute/figpack) or use a custom kachery zone by setting the KACHERY_ZONE environment variable (see https://github.com/magland/kachery). To continue using the public zones for now, upgrade kachery (pip install --upgrade kachery) and set the environment variable KACHERY_ALLOW_PUBLIC_ZONES=1. Note that upload access to the public zones will be shut down entirely in the near future. Files already stored in the public zones will remain available for download.';
+
 // initiateFileUpload handler
 export const initiateFileUploadHandler = allowCors(
   async (req: VercelRequest, res: VercelResponse) => {
@@ -555,9 +558,17 @@ export const initiateFileUploadHandler = allowCors(
       return;
     }
     try {
-      const { size, hashAlg, hash, zoneName, workToken } = rr;
+      const { size, hashAlg, hash, zoneName, workToken, allowPublicZones } =
+        rr;
       if (!isValidHash(hash, hashAlg)) {
         res.status(400).json({ error: "Invalid hash" });
+        return;
+      }
+      if (
+        (zoneName === "default" || zoneName === "scratch") &&
+        !allowPublicZones
+      ) {
+        res.status(400).json({ error: publicZonesDisabledMessage });
         return;
       }
       const apiToken = req.headers.authorization?.split(" ")[1]; // Extract the token

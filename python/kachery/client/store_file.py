@@ -54,15 +54,18 @@ def store_file(
                 print("")
                 print(
                     """
-Kachery let's scientist store data files in the cloud for the purpose of using
-cloud-based visualization tools and collaborating with others. This is a free
-service when used for scientific research purposes. In order to use it, you must
-register using your GitHub account, provide your email, and briefly describe the
-purpose of the research. To register, visit https://kachery.vercel.app. Then set
-the KACHERY_API_KEY environment variable to your API key.
+Uploads to the public kachery zones ("default" and "scratch") are being
+disabled. Please either switch to figpack
+(https://github.com/flatironinstitute/figpack) or use a custom kachery zone by
+setting the KACHERY_ZONE environment variable. Uploading to a custom zone
+requires registering at https://kachery.vercel.app and setting the
+KACHERY_API_KEY environment variable to your API key.
 
-Alternatively, you can use the "scratch" zone which is subject to regular deletion
-of files by setting the KACHERY_ZONE environment variable to "scratch".
+To continue using the public zones for now, set the environment variable
+KACHERY_ALLOW_PUBLIC_ZONES=1. The "default" zone also requires KACHERY_API_KEY,
+whereas the "scratch" zone does not. Note that upload access to the public
+zones will be shut down entirely in the near future. Files already stored in
+the public zones will remain available for download.
 
 For more information, visit https://github.com/magland/kachery.
 """.strip()

@@ -438,6 +438,7 @@ export type InitiateFileUploadRequest = {
   hash: string;
   zoneName: string;
   workToken: string;
+  allowPublicZones?: boolean;
 };
 
 export const isInitiateFileUploadRequest = (
@@ -450,6 +451,7 @@ export const isInitiateFileUploadRequest = (
     hash: isString,
     zoneName: isString,
     workToken: isString,
+    allowPublicZones: optional(isBoolean),
   });
 };
 
